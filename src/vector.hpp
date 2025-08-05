@@ -12,6 +12,7 @@ private:
     uint32_t _size;
 
 public:
+
     //////////////////////////////////////////////////////
     // Construtors
     //////////////////////////////////////////////////////
@@ -97,7 +98,7 @@ public:
     // Adds copy of `val` to the end of the container.
     // If capacity is reached, the container grows via a doubling strategy.
     //
-    void push_back(T val) {
+    void push_back(const T& val) {
         // first element added - allocate _buff of capacity 1
         if (_capacity == 0) {
             assert(_size == 0 && _buff == nullptr);

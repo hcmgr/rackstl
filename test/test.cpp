@@ -7,6 +7,7 @@
 
 #include "vector.hpp"
 #include "shared_ptr.hpp"
+#include "deque.hpp"
 
 ////////////////////////////////////////
 // Tests
@@ -173,7 +174,39 @@ void shared_ptr_test() {
     assert(sp->val == val + 2);
 }
 
+template <typename Alloc, typename T, typename... Args>
+inline void allocatorConstruct(Alloc& alloc, T* ptr, Args&&... args) {
+    std::allocator_traits<Alloc>::construct(alloc, ptr, std::forward<Args>(args)...);
+}
+
+void allocTest() {
+
+    //
+    // create chunk list
+    //
+    uint32_t nChunks = 10;
+    uint32_t chunkSize = 4;
+    MyClass** chunkList; 
+
+    std::allocator<MyClass*> listAllocator;
+    chunkList = listAllocator.allocate(nChunks);
+
+    std::allocator<MyClass> chunkAllocator;
+    for (int i = 0; i < nChunks; i++) {
+        chunkList[i] = chunkAllocator.allocate(chunkSize);
+    }
+
+    //
+    // test inserting an element
+    //
+    int i = 1, j = 2;
+    int val = 100;
+    MyClass* slot = &chunkList[i][j];
+    allocatorConstruct(chunkAllocator, slot, val);
+    assert(chunkList[i][j].val == val);
+}
+
 int main() {
-    shared_ptr_test();
+    // shared_ptr_test();
     return 0;
 }
