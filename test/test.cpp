@@ -9,10 +9,6 @@
 #include "shared_ptr.hpp"
 #include "deque.hpp"
 
-////////////////////////////////////////
-// Tests
-////////////////////////////////////////
-
 class MyClass {
 public:
     int val;
@@ -25,6 +21,10 @@ public:
 };
 int MyClass::copyCtorCalls = 0;
 int MyClass::moveCtorCalls = 0;
+
+////////////////////////////////////////
+// vector tests
+////////////////////////////////////////
 
 void vector_testPushBack() {
 
@@ -134,6 +134,10 @@ void vector_testIterate() {
     assert(std::is_sorted(vec3.begin(), vec3.end()));
 }
 
+////////////////////////////////////////
+// shared_ptr tests
+////////////////////////////////////////
+
 void shared_ptr_test() {
     int val = 1;
     rack::shared_ptr<MyClass> sp = rack::make_shared<MyClass>(val);
@@ -174,6 +178,65 @@ void shared_ptr_test() {
     assert(sp->val == val + 2);
 }
 
+////////////////////////////////////////
+// deque tests
+////////////////////////////////////////
+namespace rack {
+
+class DequeTests {
+public:
+    static void deque_test() {
+        int chunkSize = 4 * sizeof(int);
+        rack::deque<int> d1(chunkSize); // chunkSize == 4 (for testing purposes, usually 4KB)
+
+        d1.push_back(2);
+        d1.push_back(3);
+        d1.push_front(1);
+        d1.push_front(0);
+        // expect - [0,1,2,3]
+        assert(d1.size() == 4);
+        assert(d1.front() == 0);
+        assert(d1.back() == 3);
+
+        d1.pop_front();
+        d1.pop_back();
+        // expect - [X,1,2,X]
+        assert(d1.front() == 1);
+        assert(d1.back() == 2);
+
+        d1.pop_front();
+        d1.pop_front();
+        // expect - [X,X,X,X]
+        assert(d1.empty());
+        assert(d1.frontOff == 2 && d1.backOff == 2);
+
+        for (int i = 0; i < 6; i++) {
+            d1.push_back(i);
+        }
+        // expect - [X,X,0,1] [2,3,4,5]
+        assert(d1.size() == 6);
+        assert(d1.back() == 5);
+        assert(d1.nChunks == 2);
+
+        d1.push_back(6);
+        // expect - [] [X,X,0,1] [2,3,4,5] [6,X,X,X]
+        assert(d1.size() == 7);
+        assert(d1.back() == 6);
+        assert(d1.nChunks = 4);
+        assert(d1.chunkMap[0] == nullptr);
+    }
+};
+};
+
+int main() {
+    rack::DequeTests::deque_test();
+    return 0;
+}
+
+////////////////////////////////////////
+// misc
+////////////////////////////////////////
+
 template <typename Alloc, typename T, typename... Args>
 inline void allocatorConstruct(Alloc& alloc, T* ptr, Args&&... args) {
     std::allocator_traits<Alloc>::construct(alloc, ptr, std::forward<Args>(args)...);
@@ -204,9 +267,4 @@ void allocTest() {
     MyClass* slot = &chunkList[i][j];
     allocatorConstruct(chunkAllocator, slot, val);
     assert(chunkList[i][j].val == val);
-}
-
-int main() {
-    // shared_ptr_test();
-    return 0;
 }
