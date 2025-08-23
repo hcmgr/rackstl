@@ -4,10 +4,21 @@
 
 namespace rack {
 
+template <typename Alloc, typename T, typename... Args>
+void allocConstruct(Alloc& alloc, T* p, Args&&... args) {
+    std::allocator_traits<Alloc>::construct(
+        alloc, p, std::forward<Args>(args)...
+    );
+}
+
+template <typename Alloc, typename T>
+void allocDestroy(Alloc& alloc, T* p) {
+    std::allocator_traits<Alloc>::destroy(alloc, p);
+}
+
 template <class T>
 class deque {
 private:
-
     //
     // The underlying data structure is an array of fixed-size 'chunks'.
     // Together, the chunks are treated as one large buffer. We keep pointers
@@ -23,6 +34,7 @@ private:
     // chunks are not contiguous in memory.
     //
     T** chunkMap;
+
     uint32_t nChunks;
     uint32_t chunkSize;
     uint32_t _size;
@@ -34,7 +46,8 @@ private:
     std::allocator<T*> chunkAllocator;
     std::allocator<T> elementAllocator;
 
-    friend class DequeTests; // for debugging purposes
+    // friend class DequeTests; // for debugging purposes
+    friend class DequeTests;
 
 public:
 
@@ -50,14 +63,24 @@ public:
         chunkMap = chunkAllocator.allocate(nChunks);
         chunkMap[0] = elementAllocator.allocate(chunkSize);
 
+        // front and back pointers - chunk index and offset in chunk
         frontChunk = 0;
         frontOff = chunkSize / 2;
-
         backChunk = 0;
         backOff = chunkSize / 2;
     }
 
+    // copy constructor - deep copy needed
+    deque(const deque<T>& other) {
+
+    }
+
     ~deque() {
+        // free objects within each chunk
+
+        // free each chunk 
+
+        // free chunk map
 
     }
 
@@ -73,36 +96,42 @@ public:
         return chunkMap[backChunk][backOff];
     }
 
+    T& operator[](uint32_t i) {
+        if (i >= _size) {
+            throw std::runtime_error(
+                "Index out of bounds error: " +
+                std::string("index=") + std::to_string(i) + ", size=" + std::to_string(_size)
+            );
+        }
+
+        int jumpChunks = i / chunkSize;
+        int jumpOff = i % chunkSize;
+        if (frontOff + jumpOff >= chunkSize) {
+            jumpChunks++;
+        }
+
+        int chunk = frontChunk + jumpChunks;
+        int off = (frontOff + jumpOff) % chunkSize;
+        return chunkMap[chunk][off];
+    }
+
     //////////////////////////////////////////////////////
     // Modifiers
     //////////////////////////////////////////////////////
 
     void push_front(const T& val) {
-        // front is at limit => resize needed
+        // front is at limit - resize needed
         if (frontChunk == 0 && frontOff == 0) {
             grow();
         }
 
-        //
-        // move front pointer to new position
-        //
-
-        if (_size > 0) { // don't move pointer if first element being added
-            if (frontOff == 0) {
-                frontChunk -= 1;
-                frontOff = chunkSize - 1;
-
-                // lazily allocate new chunk (if needed)
-                if (chunkMap[frontChunk] == nullptr) {
-                    chunkMap[frontChunk] = elementAllocator.allocate(chunkSize);
-                }
-            } else {
-                frontOff -= 1;
-            }
+        // update front pointer - if first el added, don't update
+        if (_size > 0) {
+            dec(frontChunk, frontOff);
         }
 
         // push copy of val
-        elementAllocator.construct(chunkMap[frontChunk] + frontOff, val);
+        allocConstruct(elementAllocator, chunkMap[frontChunk] + frontOff, val);
         _size++;
     }
 
@@ -112,32 +141,19 @@ public:
             grow();
         }
 
-        //
-        // move back pointer to new position
-        //
-
-        if (_size > 0) { // don't move pointer if first element being added
-            if (backOff == chunkSize - 1) {
-                backChunk += 1;
-                backOff = 0;
-
-                // lazily allocate new chunk (if needed)
-                if (chunkMap[backChunk] == nullptr) {
-                    chunkMap[backChunk] = elementAllocator.allocate(chunkSize);
-                }
-            } else {
-                backOff += 1;
-            }
+        // update back pointer - if first el added, don't update
+        if (_size > 0) {
+            inc(backChunk, backOff);
         }
 
         // push copy of val
-        elementAllocator.construct(chunkMap[backChunk] + backOff, val);
+        allocConstruct(elementAllocator, chunkMap[backChunk] + backOff, val);
         _size++;
     }
 
     void pop_front() {
         // de-allocate object
-        elementAllocator.destroy(chunkMap[frontChunk] + frontOff);
+        allocDestroy(elementAllocator, chunkMap[frontChunk] + frontOff);
         _size -= 1;
 
         // removed last element - don't move the front pointer
@@ -150,18 +166,13 @@ public:
             return;
         }
 
-        // move the front pointer
-        if (frontOff == chunkSize - 1) {
-            frontChunk -= 1;
-            frontOff = 0;
-        } else {
-            frontOff += 1;
-        }
+        // update the front pointer
+        inc(frontChunk, frontOff);
     }
 
     void pop_back() {
         // de-allocate object
-        elementAllocator.destroy(chunkMap[backChunk] + backOff);
+        allocDestroy(elementAllocator, chunkMap[backChunk] + backOff);
         _size -= 1;
 
         // removed last element - don't move the back pointer
@@ -174,18 +185,318 @@ public:
             return;
         }
 
-        // move the back pointer
-        if (backOff == 0) {
-            backChunk -= 1;
-            backOff = chunkSize - 1;
+        // update the back pointer
+        dec(backChunk, backOff);
+    }
+
+    class iterator;
+
+    // Insert copy of `val` at position before `loc`.
+    void insert(iterator loc, const T& val) {
+        // add at front
+        if (loc == begin()) {
+            return push_front(val);
+        }
+
+        // add at end
+        if (loc == end()) {
+            return push_back(val);
+        }
+
+        //
+        // otherwise, we:
+        //      - split container at `loc`
+        //      - shift the shorter side (left or right) out one position
+        //      - insert `val` in vacant slot
+        //
+
+        uint32_t locChunk = loc.chunk - chunkMap;
+        uint32_t locOff = loc.pos - *loc.chunk;
+
+        // pick shorter side (left or right)
+        int distToFront = (locChunk - frontChunk) * chunkSize + (locOff - frontOff);
+        int distToBack = (backChunk - locChunk) * chunkSize + (backOff - locOff);
+        bool left = distToFront < distToBack; // 1 - left, 0 - right
+
+        if (left) {
+            // no room on left side - grow before we shift
+            if (frontChunk == 0 && frontOff == 0) {
+                grow(); 
+
+                // re-calculate `loc` in new map
+                loc = begin() + distToFront;
+                locChunk = loc.chunk - chunkMap;
+                locOff = loc.pos - *loc.chunk;
+            }
+
+            // shift elements left of `loc` (exclusive) left one position
+            dec(locChunk, locOff);
+            shiftLeft(locChunk, locOff);
+
         } else {
-            backOff -= 1;
+            // no room on right-side - grow before we shift
+            if (backChunk == nChunks - 1 && backOff == chunkSize - 1) {
+                grow();
+
+                // re-calculate `loc` in new map
+                loc = begin() + distToFront;
+                locChunk = loc.chunk - chunkMap;
+                locOff = loc.pos - *loc.chunk;
+            }
+
+            // shift elements right of `loc` (inclusive) right one position
+            shiftRight(locChunk, locOff);
+        }
+
+        // insert `val`
+        chunkMap[locChunk][locOff] = val;
+        _size++;
+    }
+
+    // Erase element at `pos`.
+    iterator erase(iterator pos) {
+        // de-allocate object
+
+        // pick shorter side (left or right)
+
+        // shift shorter side in by one
+    }
+
+    //
+    // Resize container to `count` elements.
+    //
+    // If `count` is equal current size, do nothing.
+    // If `count` is greater than current size, additional copies of `val` are appended.
+    // If `count` less than current size, container reduced to first `count` elements.
+    //
+    void resize(uint32_t count, T& val) {
+        if (count == _size) {
+            // do nothing
+            return;
+        } else if (count > _size) {
+            // append additional copies of T()
+            while (count > _size++) {
+                push_back(val);
+            }
+        } else {
+            // reduce to first `count` elements
+            while (count < _size--) {
+                pop_back();
+            }
         }
     }
 
-    void resize();
+    void resize(uint32_t count) {
+        return resize(count, T());
+    }
 
-    void clear();
+    void clear() {
+
+    }
+
+    //////////////////////////////////////////////////////
+    // Iterators
+    //////////////////////////////////////////////////////
+
+    class iterator {
+    public:
+        T* pos;             // position in chunk
+        T** chunk;          // chunk pointer
+        uint32_t chunkSize; // chunk size - TODO: replace this with compile-time variable
+
+        // typedefs - necessary for other STL functions to use this (e.g. std::sort)
+        using iterator_category = std::random_access_iterator_tag;
+        using difference_type   = std::ptrdiff_t;
+        using value_type        = T;
+        using pointer           = T*;
+        using reference         = T&;
+
+        // constructor
+        iterator(T* pos, T** chunk, uint32_t chunkSize) 
+            : pos(pos), chunk(chunk), chunkSize(chunkSize) {}
+        
+        // copy constructor
+        iterator(const iterator& other)
+            : pos(other.pos), chunk(other.chunk), chunkSize(other.chunkSize) {}
+
+        // dereference
+        T& operator*() const { return *pos; }
+        T* operator->() const { return pos; }
+
+        //
+        // comparison
+        //
+
+        bool operator==(const iterator& other) const { return pos == other.pos; }
+        bool operator!=(const iterator& other) const { return pos != other.pos; }
+
+        bool operator<(const iterator& other) const { 
+            return chunk < other.chunk || (chunk == other.chunk && pos < other.pos);
+        }
+
+        bool operator<=(const iterator& other) const { 
+            return chunk < other.chunk || (chunk == other.chunk && pos <= other.pos);
+        }
+
+        bool operator>(const iterator& other) const { 
+            return chunk > other.chunk || (chunk == other.chunk && pos > other.pos);
+        }
+
+        bool operator>=(const iterator& other) const { 
+            return chunk > other.chunk || (chunk == other.chunk && pos >= other.pos);
+        }
+
+        //
+        // arithmetic
+        //
+
+        iterator operator+(uint32_t i) const { 
+            iterator newIt = *this;
+            newIt += i;
+            return newIt;
+        }
+
+        iterator operator-(uint32_t i) const { 
+            iterator newIt = *this;
+            newIt -= i;
+            return newIt;
+        }
+
+        iterator& operator+=(uint32_t i) {
+            int jumpChunks = i / chunkSize;
+            int jumpOff = i % chunkSize;
+            
+            int posOff = pos - *chunk;
+            if (chunkSize <= posOff + jumpOff) {
+                jumpChunks++;
+            }
+            posOff = (posOff + jumpOff) % chunkSize;
+
+            chunk += jumpChunks;
+            pos = *chunk + posOff;
+            return *this;
+        }
+
+        iterator& operator-=(uint32_t i) {
+            int jumpChunks = i / chunkSize;
+            int jumpOff = i % chunkSize;
+
+            int posOff = pos - *chunk;
+            if (posOff - jumpOff < 0) {
+                jumpChunks++;
+                posOff = chunkSize - jumpOff + posOff;
+            } else {
+                posOff -= jumpOff;
+            }
+
+            chunk -= jumpChunks;
+            pos = *chunk + posOff;
+            return *this;
+        }
+
+        int operator-(const iterator& other) const {
+            bool isNeg = false;
+            iterator large = *this;
+            iterator small = other;
+            if (large < small) {
+                std::swap(large, small);
+                isNeg = true;
+            }
+
+            int jumpChunks = large.chunk - small.chunk;
+            int largeOff = large.pos - *(large.chunk);
+            int smallOff = small.pos - *(small.chunk);
+            int res = jumpChunks * chunkSize + (largeOff - smallOff);
+            if (isNeg) {
+                res *= -1;
+            }
+            return res;
+        }
+
+        // pre-increment
+        iterator& operator++() { 
+            if (pos == *chunk + chunkSize - 1) {
+                chunk++;
+                pos = *chunk;
+            } else {
+                pos++;
+            }
+            return *this;
+        } 
+
+        // post-increment
+        iterator operator++(int) { 
+            iterator tmp = *this; // copy old iterator
+            ++(*this);
+            return tmp;
+        }
+
+        // pre-decrement
+        iterator& operator--() {
+            if (pos == 0) {
+                chunk--;
+                pos = *chunk + chunkSize - 1;
+            } else {
+                pos--;
+            }
+            return *this;
+        }
+
+        // post-decrement
+        iterator operator--(int) {
+            iterator tmp = *this; // copy old iterator
+            --(*this);
+            return tmp;
+        }
+
+        // index
+        T& operator[](uint32_t i) const {
+            int jumpChunks = i / chunkSize;
+            int jumpOff = i % chunkSize;
+            
+            int posOff = pos - *chunk;
+            if (chunkSize <= posOff + jumpOff) {
+                jumpChunks++;
+            }
+            posOff = (posOff + jumpOff) % chunkSize;
+
+            return *(*(chunk + jumpChunks) + posOff);
+        }
+
+        std::string to_string() {
+            std::ostringstream oss;
+            oss << "chunk front: " << *chunk << "\n";
+            oss << "pos: " << pos << "\n";
+            oss << "chunk: " << chunk << "\n";
+            oss << "\n";
+            return oss.str();
+        }
+    };
+
+    // Iterator pointing to front
+    iterator begin() {
+        return iterator(
+            *(chunkMap + frontChunk) + frontOff, 
+            chunkMap + frontChunk,
+            chunkSize
+        );
+    }
+
+    // Iterator pointing to one past the back
+    iterator end() {
+        if (backOff == chunkSize - 1) {
+            return iterator(
+                *(chunkMap + backChunk + 1),
+                chunkMap + backChunk + 1,
+                chunkSize
+            );
+        }
+        return iterator(
+            *(chunkMap + backChunk) + backOff + 1, 
+            chunkMap + backChunk,
+            chunkSize
+        );
+    }
 
     //////////////////////////////////////////////////////
     // Display
@@ -199,6 +510,7 @@ public:
         oss << "Chunk size: " << chunkSize << "\n";
         oss << "Front: " << frontChunk << " " << frontOff << "\n";
         oss << "Back: " << backChunk << " " << backOff << "\n";
+        oss << "Size: " << _size << "\n";
         for (int i = 0; i < nChunks; i++) {
             if (chunkMap[i] == nullptr) {
                 oss << "[]";
@@ -232,8 +544,20 @@ public:
     bool empty() { return _size == 0; }
     uint32_t size() { return _size; }
 
+    //
+    // Requests removal of un-used capacity (i.e. to reduce memory usage).
+    // 
+    // For this implementation, that means de-allocating un-used chunks.
+    // Our implementation ensures elements are logically contiguous, and
+    // centred in the container. Therefore, these un-used chunks will always
+    // be at the ends.
+    //
+    void shrink_to_fit() {
+
+    }
+
 private:
-    // Grow the chunk map by 2x. Re-centre the existing pointers.
+    // Grow the chunk map by 2x. Re-centre the existing chunk pointers.
     void grow() {
         // allocate new 2x map
         uint32_t newnChunks = nChunks * 2;
@@ -258,6 +582,87 @@ private:
         frontChunk += centerOff;
         backChunk += centerOff;
     }
-};
 
+    // Increment chunk map position
+    void inc(uint32_t& chunk, uint32_t& off) {
+        if (off == chunkSize - 1) {
+            chunk++;
+            off = 0;
+        } else {
+            off++;    
+        }
+
+        // lazily allocate new chunk (if needed)
+        if (0 <= chunk && chunk < nChunks && chunkMap[chunk] == nullptr) {
+            chunkMap[chunk] = elementAllocator.allocate(chunkSize);
+        }
+    }
+
+    // Decrement chunk map position
+    void dec(uint32_t& chunk, uint32_t& off) {
+        if (off == 0) {
+            chunk--;
+            off = chunkSize - 1;
+        } else {
+            off--;
+        }
+
+        // lazily allocate new chunk (if needed)
+        if (0 <= chunk && chunk < nChunks && chunkMap[chunk] == nullptr) {
+            chunkMap[chunk] = elementAllocator.allocate(chunkSize);
+        }
+    }
+
+    // 
+    // Shift all elements in range [front, end] (inclusive) one position to the left.
+    //
+    void shiftLeft(uint32_t endChunk, uint32_t endOff) {
+        uint32_t currChunk = frontChunk;
+        uint32_t currOff = frontOff;
+        
+        // start one to left of front
+        dec(currChunk, currOff);
+
+        // walk forwards, moving each element left one position
+        while (!(currChunk == endChunk && currOff == endOff)) {
+            if (currOff == chunkSize - 1) {
+                chunkMap[currChunk][currOff] = std::move(chunkMap[currChunk + 1][0]);
+                currChunk += 1;
+                currOff = 0;
+            } else {
+                chunkMap[currChunk][currOff] = std::move(chunkMap[currChunk][currOff + 1]);
+                currOff += 1;
+            }
+        }
+
+        // update front pointer
+        dec(frontChunk, frontOff);
+    }
+
+    //
+    // Shift all elements in range [start, back] (inclusive) one position to the right
+    //
+    void shiftRight(uint32_t startChunk, uint32_t startOff) {
+        uint32_t currChunk = backChunk;
+        uint32_t currOff = backOff;
+
+        // start one to right of back
+        inc(currChunk, currOff);
+
+        // walk backwards, moving each element right one position
+        while (startChunk <= currChunk && startOff <= currOff) {
+            if (currOff > 0) {
+                chunkMap[currChunk][currOff] = std::move(chunkMap[currChunk][currOff - 1]);
+                currOff -= 1;
+            } else {
+                chunkMap[currChunk][currOff] = std::move(chunkMap[currChunk - 1][chunkSize - 1]);
+                currChunk -= 1;
+                currOff = chunkSize - 1;
+            }
+        }
+        
+        // update back pointer
+        inc(backChunk, backOff);
+    }
+};
 };

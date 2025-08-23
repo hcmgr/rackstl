@@ -4,11 +4,17 @@
 #include <random> 
 #include <algorithm>
 #include <memory>
+#include <gtest/gtest.h>
+#include <deque>
+#include <iostream>
 
 #include "vector.hpp"
 #include "shared_ptr.hpp"
 #include "deque.hpp"
 
+namespace rack {
+
+// Test class used to track copy and move ctor calls when testing our data structures
 class MyClass {
 public:
     int val;
@@ -26,7 +32,7 @@ int MyClass::moveCtorCalls = 0;
 // vector tests
 ////////////////////////////////////////
 
-void vector_testPushBack() {
+void vector_testGeneral() {
 
     //
     // test vector of standard type (i.e. 'int')
@@ -99,6 +105,7 @@ void vector_testIterate() {
     assert(vec1.begin() != vec1.end());
     assert(vec1.begin() < vec1.end());
     assert(vec1.begin() + n == vec1.end());
+    assert(vec1.end() - n == vec1.begin());
 
     rack::vector<int>::iterator it1 = vec1.begin();
     for (int i = 0; i < n; i++) {
@@ -112,14 +119,12 @@ void vector_testIterate() {
 
     assert(n == std::distance(vec1.begin(), vec1.end()));
 
-    // dereference
+    // access / dereference
     rack::vector<MyClass> vec2;
     vec2.push_back(MyClass(0));
     rack::vector<MyClass>::iterator it2 = vec2.begin();
     assert((*it2).val == vec2[0].val);
     assert(it2->val == vec2[0].val);
-
-    // index
     assert(it2[0].val == vec2[0].val);
 
     // sort
@@ -138,7 +143,7 @@ void vector_testIterate() {
 // shared_ptr tests
 ////////////////////////////////////////
 
-void shared_ptr_test() {
+void shared_ptr_testGeneral() {
     int val = 1;
     rack::shared_ptr<MyClass> sp = rack::make_shared<MyClass>(val);
     rack::shared_ptr<MyClass> sp1 = sp;
@@ -181,13 +186,12 @@ void shared_ptr_test() {
 ////////////////////////////////////////
 // deque tests
 ////////////////////////////////////////
-namespace rack {
 
 class DequeTests {
 public:
-    static void deque_test() {
+    static void deque_testPushFrontAndPushBack() {
         int chunkSize = 4 * sizeof(int);
-        rack::deque<int> d1(chunkSize); // chunkSize == 4 (for testing purposes, usually 4KB)
+        rack::deque<int> d1(chunkSize); // small chunkSize (for testing purposes, usually 4KB)
 
         d1.push_back(2);
         d1.push_back(3);
@@ -197,6 +201,7 @@ public:
         assert(d1.size() == 4);
         assert(d1.front() == 0);
         assert(d1.back() == 3);
+        for (int i = 0; i < 4; i++) { assert(d1[i] == i); }
 
         d1.pop_front();
         d1.pop_back();
@@ -222,49 +227,111 @@ public:
         // expect - [] [X,X,0,1] [2,3,4,5] [6,X,X,X]
         assert(d1.size() == 7);
         assert(d1.back() == 6);
-        assert(d1.nChunks = 4);
+        assert(d1[d1.size() - 1] == 6);
+        assert(d1.nChunks == 4);
         assert(d1.chunkMap[0] == nullptr);
+    }
+
+    template <typename T>
+    static void deque_testIterateHelper(rack::deque<T>& d, int chunkSize, int n) {
+        std::cout << d.to_string() << "\n";
+
+        //
+        // arithmetic and comparison
+        //
+        assert(d.begin() != d.end());
+        for (int i = 0; i < n; i++) {
+            assert(d.begin() + (n - i) == d.end() - i);
+        }
+
+        auto it = d.begin();
+        it += n;
+        assert(it == d.end());
+        it -= n;
+        assert(it == d.begin());
+
+        assert(std::distance(d.begin(), d.end()) == n);
+
+        assert(d.begin() < d.end());
+        assert(d.begin() <= d.end());
+        assert(d.end() > d.begin());
+        assert(d.end() >= d.begin());
+
+        for (int i = 0; i < n; i++) {
+            assert(*(d.begin() + i) == i);
+        }
+        for (int i = 1; i <= n; i++) {
+            assert(*(d.end() - i) == n - i);
+        }
+
+        // access / dereference
+        it = d.begin();
+        assert(*(it + 1) == 1);
+        for (int i = 0; i < n; i++) {
+            assert(*(it + i) == i);
+            assert(it[i] == i);
+        }
+
+        // looping
+        for (auto &el : d) { el++; }
+        for (int i = 0; i < n; i++) { assert(d[i]-- == i + 1); }
+
+        std::for_each(d.begin(), d.end(), [](T& el) { el++; });
+        for (int i = 0; i < n; i++) { assert(d[i]-- == i + 1); }
+
+        // sort
+        rack::deque<int> vec3;
+        std::random_device rd;
+        std::mt19937 gen(rd());
+        std::uniform_int_distribution<> dist(0, 100);
+        for (int i = 0; i < n; ++i) {
+            vec3.push_back(dist(gen));
+        }
+        std::sort(vec3.begin(), vec3.end());
+        assert(std::is_sorted(vec3.begin(), vec3.end()));
+    }
+
+    static void deque_testIterate() {
+        for (int i = 4; i < 16; i++) {
+            int chunkSize = i * sizeof(int);
+            int n = chunkSize * 4;
+            rack::deque<int> d(chunkSize);
+            for (int i = 0; i < n; i++) { d.push_back(i); }
+            deque_testIterateHelper(d, chunkSize, n);
+        }
+
+        // int chunkSize = 4 * sizeof(int);
+        // int n = 10;
+        // rack::deque<int> d(chunkSize);
+        // for (int i = 0; i < n; i++) { d.push_back(i); }
+        // deque_testIterateHelper(d, chunkSize, n); 
+    }
+
+    static void deque_testInsertErase() {
+        int chunkSize = 8 * sizeof(int);
+        rack::deque<int> d1(chunkSize); 
+        int n = 12;
+        for (int i = 0; i < n; i++) { d1.push_back(i); }
+        std::cout << d1.to_string() << "\n";
+
+        d1.insert(d1.begin(), -1);
+        std::cout << d1.to_string() << "\n";
+
+        d1.insert(d1.begin() + 4, 420);
+        std::cout << d1.to_string() << "\n";
+        d1.insert(d1.begin() + 4, 421);
+        std::cout << d1.to_string() << "\n";
+        d1.insert(d1.begin() + 4, 422);
+        std::cout << d1.to_string() << "\n";
+        d1.insert(d1.begin() + 4, 423);
+        std::cout << d1.to_string() << "\n";
     }
 };
 };
 
 int main() {
-    rack::DequeTests::deque_test();
+    // rack::DequeTests::deque_testPushFrontAndPushBack(); 
+    // rack::DequeTests::deque_testIterate();
+    rack::DequeTests::deque_testInsertErase();
     return 0;
-}
-
-////////////////////////////////////////
-// misc
-////////////////////////////////////////
-
-template <typename Alloc, typename T, typename... Args>
-inline void allocatorConstruct(Alloc& alloc, T* ptr, Args&&... args) {
-    std::allocator_traits<Alloc>::construct(alloc, ptr, std::forward<Args>(args)...);
-}
-
-void allocTest() {
-
-    //
-    // create chunk list
-    //
-    uint32_t nChunks = 10;
-    uint32_t chunkSize = 4;
-    MyClass** chunkList; 
-
-    std::allocator<MyClass*> listAllocator;
-    chunkList = listAllocator.allocate(nChunks);
-
-    std::allocator<MyClass> chunkAllocator;
-    for (int i = 0; i < nChunks; i++) {
-        chunkList[i] = chunkAllocator.allocate(chunkSize);
-    }
-
-    //
-    // test inserting an element
-    //
-    int i = 1, j = 2;
-    int val = 100;
-    MyClass* slot = &chunkList[i][j];
-    allocatorConstruct(chunkAllocator, slot, val);
-    assert(chunkList[i][j].val == val);
 }

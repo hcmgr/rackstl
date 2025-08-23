@@ -65,7 +65,7 @@ public:
     //////////////////////////////////////////////////////
 
     // [] operator override
-    T& operator [](uint32_t i) {
+    T& operator[](uint32_t i) {
         if (i < 0 || i >= _size) {
             throw std::runtime_error(
                 "Index out of bounds error: " +
