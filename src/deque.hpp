@@ -193,6 +193,11 @@ public:
 
     // Insert copy of `val` at position before `loc`.
     void insert(iterator loc, const T& val) {
+        if (loc < begin() || loc >= end()) { 
+            std::cout << "loc out of range" << "\n";
+            return; 
+        }
+
         // add at front
         if (loc == begin()) {
             return push_front(val);
@@ -267,6 +272,7 @@ public:
             allocDestroy(elementAllocator, chunkMap[frontChunk] + frontOff);
             chunkMap[frontChunk][frontOff] = T();
             inc(frontChunk, frontOff);
+            _size--;
             return;
         }
 
@@ -275,6 +281,7 @@ public:
             allocDestroy(elementAllocator, chunkMap[backChunk] + backOff);
             chunkMap[backChunk][backOff] = T();
             dec(backChunk, backOff);
+            _size--;
             return;
         }
 
@@ -295,17 +302,20 @@ public:
 
         // de-allocate object
         allocDestroy(elementAllocator, chunkMap[locChunk] + locOff);
-        // chunkMap[locChunk][locOff] = T();
 
         if (left) {
+            // shift elements in range [front, loc) in one position
             dec(locChunk, locOff);
             shiftRight(frontChunk, frontOff, locChunk, locOff);
             inc(frontChunk, frontOff);
         } else {
+            // shift elements in range (loc, loc] in one position
             inc(locChunk, locOff);
             shiftLeft(locChunk, locOff, backChunk, backOff);
             dec(backChunk, backOff);
         }
+
+        _size--;
     }
 
     //
@@ -336,8 +346,16 @@ public:
         return resize(count, T());
     }
 
+    //
+    // Clears the container (i.e. size() == 0).
+    //
+    // Container capacity is preserved (i.e. chunks are not free'd). To
+    // free the underlying memory, call shrink_to_fit() after clear().
+    //
     void clear() {
-
+        while (_size > 0) {
+            erase(begin());
+        }
     }
 
     //////////////////////////////////////////////////////
@@ -663,6 +681,8 @@ private:
                 currOff += 1;
             }
         }
+
+        chunkMap[endChunk][endOff] = T();
     }
 
     //
@@ -686,6 +706,8 @@ private:
                 currOff = chunkSize - 1;
             }
         }
+
+        chunkMap[startChunk][startOff] = T();
     }
 };
 };

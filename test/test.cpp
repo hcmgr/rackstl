@@ -347,6 +347,14 @@ public:
         // expect - [0,0,0,0,0], [-2,100,0,1,2], [3,4,100,6,0], [0,0,0,0,0]
         expected = {-2,100,0,1,2,3,4,100,6};
         for (size_t i = 0; i < expected.size(); i++) { assert(d1[i] == expected[i]); }
+
+        //
+        // clear
+        //
+
+        d1.clear();
+        assert(d1.size() == 0);
+        assert(d1.begin() == d1.end());
     }
 
     template <typename T>
@@ -420,7 +428,7 @@ public:
             deque_testIterateHelper<int>(chunkSize, n);
 
             // custom object type
-            // deque_testIterateHelper<MyClass>(chunkSize, n);
+            deque_testIterateHelper<MyClass>(chunkSize, n);
         }
     }
 };
