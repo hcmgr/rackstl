@@ -281,7 +281,7 @@ public:
         assert(d1.chunkMap[0] == nullptr);
     }
 
-    void deque_testInsertErase() {
+    void deque_testInsertEraseClearShrink() {
         int chunkSize = 5 * sizeof(int);
         rack::deque<int> d1(chunkSize); 
         std::vector<int> expected;
@@ -349,11 +349,22 @@ public:
         for (size_t i = 0; i < expected.size(); i++) { assert(d1[i] == expected[i]); }
 
         //
+        // shrink to fit
+        //
+        uint32_t oldSize = d1.size();
+        d1.shrink_to_fit();
+        // expect - [-2,100,0,1,2], [3,4,100,6,0]
+        assert(d1.size() == oldSize);
+        for (size_t i = 0; i < expected.size(); i++) { assert(d1[i] == expected[i]); }
+        assert(d1.nChunks == 2);
+
+        //
         // clear
         //
-
+        uint32_t oldNChunks = d1.nChunks;
         d1.clear();
         assert(d1.size() == 0);
+        assert(d1.nChunks == oldNChunks);
         assert(d1.begin() == d1.end());
     }
 
@@ -445,7 +456,7 @@ int main() {
     // deque tests
     rack::DequeTests dt;
     dt.deque_testPushFrontPushBack();
-    dt.deque_testInsertErase();
+    dt.deque_testInsertEraseClearShrink();
     dt.deque_testIterate();
     return 0;
 }

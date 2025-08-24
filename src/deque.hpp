@@ -595,12 +595,44 @@ public:
     // Requests removal of un-used capacity (i.e. to reduce memory usage).
     // 
     // For this implementation, that means de-allocating un-used chunks.
-    // Our implementation ensures elements are logically contiguous, and
-    // centred in the container. Therefore, these un-used chunks will always
+    // Our implementation ensures elements are always logically contiguous, 
+    // and centred in the container. Therefore, the un-used chunks will always
     // be at the ends.
     //
     void shrink_to_fit() {
+        // de-allocate un-used chunks before front
+        int32_t currChunk = frontChunk - 1;
+        while (currChunk >= 0) {
+            elementAllocator.deallocate(chunkMap[currChunk], chunkSize);
+            currChunk--;
+        }
 
+        // de-allocate un-used chunks after back
+        currChunk = backChunk + 1;
+        while (currChunk < nChunks) {
+            elementAllocator.deallocate(chunkMap[currChunk], chunkSize);
+            currChunk++;
+        }
+
+        // allocate new chunkMap for number of used chunks
+        uint32_t nUsedChunks = backChunk - frontChunk + 1;
+        T** newChunkMap = chunkAllocator.allocate(nUsedChunks);
+
+        // copy old chunk pointers into new map
+        currChunk = frontChunk;
+        for (int i = 0; i < nUsedChunks; i++) {
+            newChunkMap[i] = chunkMap[currChunk];
+            currChunk++;
+        }
+
+        // de-allocate old map and replace with new one
+        chunkAllocator.deallocate(chunkMap, nChunks);
+        chunkMap = newChunkMap;
+        nChunks = nUsedChunks;
+
+        // update front and back pointers after resize
+        frontChunk = 0;
+        backChunk = nUsedChunks - 1;
     }
 
 private:
