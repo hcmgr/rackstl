@@ -203,15 +203,15 @@ public:
     std::string to_string() 
     {
         std::ostringstream oss;
-        oss << "[ ";
+        oss << "[";
         for (uint32_t i = 0; i < _size; ++i) 
         {
             oss << _buff[i];
             if (i != _size - 1) {
-                oss << ", ";
+                oss << ",";
             }
         }
-        oss << " ]\n";
+        oss << "]\n";
         return oss.str();
     }
 
