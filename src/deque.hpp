@@ -325,7 +325,7 @@ public:
     // If `count` is greater than current size, additional copies of `val` are appended.
     // If `count` less than current size, container reduced to first `count` elements.
     //
-    void resize(uint32_t count, T& val) {
+    void resize(uint32_t count, const T& val) {
         if (count == _size) {
             // do nothing
             return;
