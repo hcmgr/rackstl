@@ -229,9 +229,10 @@ public:
                 locOff = loc.pos - *loc.chunk;
             }
 
-            // shift elements left of `loc` (exclusive) left one position
+            // shift elements in range [front, loc) left one position (excluding loc)
             dec(locChunk, locOff);
-            shiftLeft(locChunk, locOff);
+            shiftLeft(frontChunk, frontOff, locChunk, locOff);
+            dec(frontChunk, frontOff);
 
         } else {
             // no room on right-side - grow before we shift
@@ -244,8 +245,9 @@ public:
                 locOff = loc.pos - *loc.chunk;
             }
 
-            // shift elements right of `loc` (inclusive) right one position
-            shiftRight(locChunk, locOff);
+            // shift elements in range [loc, back] right one position (including loc)
+            shiftRight(locChunk, locOff, backChunk, backOff);
+            inc(backChunk, backOff);
         }
 
         // insert `val`
@@ -253,13 +255,57 @@ public:
         _size++;
     }
 
-    // Erase element at `pos`.
-    iterator erase(iterator pos) {
-        // de-allocate object
+    // Erase element at `loc`.
+    void erase(iterator loc) {
+        if (loc < begin() || loc >= end()) { 
+            std::cout << "loc out of range" << "\n";
+            return; 
+        }
+
+        // remove front element
+        if (loc == begin()) {
+            allocDestroy(elementAllocator, chunkMap[frontChunk] + frontOff);
+            chunkMap[frontChunk][frontOff] = T();
+            inc(frontChunk, frontOff);
+            return;
+        }
+
+        // remove back element
+        if (loc == end() - 1) {
+            allocDestroy(elementAllocator, chunkMap[backChunk] + backOff);
+            chunkMap[backChunk][backOff] = T();
+            dec(backChunk, backOff);
+            return;
+        }
+
+        //
+        // otherwise, we:
+        //      - split container at `loc`
+        //      - shift the shorter side (left or right) in one position
+        //      - insert `val` in vacant slot
+        //
+
+        uint32_t locChunk = loc.chunk - chunkMap;
+        uint32_t locOff = loc.pos - *loc.chunk;
 
         // pick shorter side (left or right)
+        int distToFront = (locChunk - frontChunk) * chunkSize + (locOff - frontOff);
+        int distToBack = (backChunk - locChunk) * chunkSize + (backOff - locOff);
+        bool left = distToFront < distToBack; // 1 - left, 0 - right
 
-        // shift shorter side in by one
+        // de-allocate object
+        allocDestroy(elementAllocator, chunkMap[locChunk] + locOff);
+        // chunkMap[locChunk][locOff] = T();
+
+        if (left) {
+            dec(locChunk, locOff);
+            shiftRight(frontChunk, frontOff, locChunk, locOff);
+            inc(frontChunk, frontOff);
+        } else {
+            inc(locChunk, locOff);
+            shiftLeft(locChunk, locOff, backChunk, backOff);
+            dec(backChunk, backOff);
+        }
     }
 
     //
@@ -597,13 +643,13 @@ private:
     }
 
     // 
-    // Shift all elements in range [front, end] (inclusive) one position to the left.
+    // Shift all elements in range [start, end] (inclusive) one position to the left.
     //
-    void shiftLeft(uint32_t endChunk, uint32_t endOff) {
-        uint32_t currChunk = frontChunk;
-        uint32_t currOff = frontOff;
+    void shiftLeft(uint32_t startChunk, uint32_t startOff, uint32_t endChunk, uint32_t endOff) {
+        uint32_t currChunk = startChunk;
+        uint32_t currOff = startOff;
         
-        // start one to the left of the front pointer
+        // start one to the left of the start pointer
         dec(currChunk, currOff);
 
         // walk forwards, moving each element left one position
@@ -617,19 +663,16 @@ private:
                 currOff += 1;
             }
         }
-
-        // update front pointer
-        dec(frontChunk, frontOff);
     }
 
     //
-    // Shift all elements in range [start, back] (inclusive) one position to the right
+    // Shift all elements in range [start, end] (inclusive) one position to the right
     //
-    void shiftRight(uint32_t startChunk, uint32_t startOff) {
-        uint32_t currChunk = backChunk;
-        uint32_t currOff = backOff;
+    void shiftRight(uint32_t startChunk, uint32_t startOff, uint32_t endChunk, uint32_t endOff) {
+        uint32_t currChunk = endChunk;
+        uint32_t currOff = endOff;
 
-        // start one to the right of the back pointer
+        // start one to the right of the end pointer
         inc(currChunk, currOff);
 
         // walk backwards, moving each element right one position
@@ -643,9 +686,6 @@ private:
                 currOff = chunkSize - 1;
             }
         }
-        
-        // update back pointer
-        inc(backChunk, backOff);
     }
 };
 };

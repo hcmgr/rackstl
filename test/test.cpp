@@ -286,6 +286,10 @@ public:
         rack::deque<int> d1(chunkSize); 
         std::vector<int> expected;
 
+        //
+        // insert
+        //
+
         for (int i = 0; i < 8; i++) { d1.push_back(i); }
         // initial - [0,0,0,1,2], [3,4,5,6,7]
         expected = {0,1,2,3,4,5,6,7};
@@ -314,6 +318,34 @@ public:
         d1.insert(d1.end() - 2, 100);
         // expect - [0,0,0,-3,-2], [100,-1,0,1,2], [3,4,5,100,6], [7,0,0,0,0]
         expected = {-3,-2,100,-1,0,1,2,3,4,5,100,6,7};
+        for (size_t i = 0; i < expected.size(); i++) { assert(d1[i] == expected[i]); }
+
+        //
+        // erase
+        //
+
+        // erase from front
+        d1.erase(d1.begin());
+        // expect - [0,0,0,0,-2], [100,-1,0,1,2], [3,4,5,100,6], [7,0,0,0,0]
+        expected = {-2,100,-1,0,1,2,3,4,5,100,6,7};
+        for (size_t i = 0; i < expected.size(); i++) { assert(d1[i] == expected[i]); }
+
+        // erase from back
+        d1.erase(d1.end() - 1);
+        // expect - [0,0,0,0,-2], [100,-1,0,1,2], [3,4,5,100,6], [0,0,0,0,0]
+        expected = {-2,100,-1,0,1,2,3,4,5,100,6};
+        for (size_t i = 0; i < expected.size(); i++) { assert(d1[i] == expected[i]); }
+
+        // erase from middle (shift left case)
+        d1.erase(d1.begin() + 2);
+        // expect - [0,0,0,0,0], [-2,100,0,1,2], [3,4,5,100,6], [0,0,0,0,0]
+        expected = {-2,100,0,1,2,3,4,5,100,6};
+        for (size_t i = 0; i < expected.size(); i++) { assert(d1[i] == expected[i]); }
+
+        // erase from middle (shift right case)
+        d1.erase(d1.end() - 3);
+        // expect - [0,0,0,0,0], [-2,100,0,1,2], [3,4,100,6,0], [0,0,0,0,0]
+        expected = {-2,100,0,1,2,3,4,100,6};
         for (size_t i = 0; i < expected.size(); i++) { assert(d1[i] == expected[i]); }
     }
 
