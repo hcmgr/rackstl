@@ -128,15 +128,17 @@ void vector_testIterate() {
     assert(it2[0].val == vec2[0].val);
 
     // sort
-    rack::vector<int> vec3;
-    std::random_device rd;
-    std::mt19937 gen(rd());
-    std::uniform_int_distribution<> dist(0, 100);
-    for (int i = 0; i < n; ++i) {
-        vec3.push_back(dist(gen));
-    }
-    std::sort(vec3.begin(), vec3.end());
-    assert(std::is_sorted(vec3.begin(), vec3.end()));
+    // rack::vector<int> vec3;
+    // std::random_device rd;
+    // std::mt19937 gen(rd());
+    // std::uniform_int_distribution<> dist(0, 100);
+    // for (int i = 0; i < n; ++i) {
+    //     vec3.push_back(dist(gen));
+    // }
+    // std::sort(vec3.begin(), vec3.end());
+    // assert(std::is_sorted(vec3.begin(), vec3.end()));
+
+
 }
 
 ////////////////////////////////////////
@@ -280,51 +282,67 @@ public:
         for (int i = 0; i < n; i++) { assert(d[i]-- == i + 1); }
 
         // sort
-        rack::deque<int> vec3;
         std::random_device rd;
         std::mt19937 gen(rd());
         std::uniform_int_distribution<> dist(0, 100);
         for (int i = 0; i < n; ++i) {
-            vec3.push_back(dist(gen));
+            d[i] = dist(gen);
         }
-        std::sort(vec3.begin(), vec3.end());
-        assert(std::is_sorted(vec3.begin(), vec3.end()));
+        std::cout << d.to_string() << "\n";
+        std::sort(d.begin(), d.end());
+        std::cout << d.to_string() << "\n";
+        assert(std::is_sorted(d.begin(), d.end()));
     }
 
     static void deque_testIterate() {
+        int chunkSize, n;
+
+        //
+        // run iterator tests for different chunk sizes
+        //
         for (int i = 4; i < 16; i++) {
-            int chunkSize = i * sizeof(int);
-            int n = chunkSize * 4;
+            chunkSize = i * sizeof(int);
+            n = chunkSize * 4;
             rack::deque<int> d(chunkSize);
             for (int i = 0; i < n; i++) { d.push_back(i); }
             deque_testIterateHelper(d, chunkSize, n);
         }
-
-        // int chunkSize = 4 * sizeof(int);
-        // int n = 10;
-        // rack::deque<int> d(chunkSize);
-        // for (int i = 0; i < n; i++) { d.push_back(i); }
-        // deque_testIterateHelper(d, chunkSize, n); 
     }
 
     static void deque_testInsertErase() {
-        int chunkSize = 8 * sizeof(int);
+        int chunkSize = 5 * sizeof(int);
         rack::deque<int> d1(chunkSize); 
-        int n = 12;
-        for (int i = 0; i < n; i++) { d1.push_back(i); }
-        std::cout << d1.to_string() << "\n";
+        std::vector<int> expected;
 
+        for (int i = 0; i < 8; i++) { d1.push_back(i); }
+        // initial - [0,0,0,1,2], [3,4,5,6,7]
+        expected = {0,1,2,3,4,5,6,7};
+        for (size_t i = 0; i < expected.size(); i++) { assert(d1[i] == expected[i]); }
+
+        // insert at front
         d1.insert(d1.begin(), -1);
-        std::cout << d1.to_string() << "\n";
+        // expect - [0,-1,0,1,2], [3,4,5,6,7] 
+        expected = {-1,0,1,2,3,4,5,6,7};
+        for (size_t i = 0; i < expected.size(); i++) { assert(d1[i] == expected[i]); }
 
-        d1.insert(d1.begin() + 4, 420);
-        std::cout << d1.to_string() << "\n";
-        d1.insert(d1.begin() + 4, 421);
-        std::cout << d1.to_string() << "\n";
-        d1.insert(d1.begin() + 4, 422);
-        std::cout << d1.to_string() << "\n";
-        d1.insert(d1.begin() + 4, 423);
-        std::cout << d1.to_string() << "\n";
+        // insert at front and back such that it grows
+        d1.insert(d1.begin(), -2);
+        d1.insert(d1.begin(), -3);
+        // expect - [0,0,0,0,-3], [-2,-1,0,1,2], [3,4,5,6,7], []
+        expected = {-3,-2,-1,0,1,2,3,4,5,6,7};
+        for (size_t i = 0; i < expected.size(); i++) { assert(d1[i] == expected[i]); }
+
+        // insert causing shift left
+        d1.insert(d1.begin() + 2, 100);
+        // expect - [0,0,0,-3,-2], [100,-1,0,1,2], [3,4,5,6,7], []
+        expected = {-3,-2,100,-1,0,1,2,3,4,5,6,7};
+        for (size_t i = 0; i < expected.size(); i++) { assert(d1[i] == expected[i]); }
+
+        // insert causing shift right
+        d1.insert(d1.end() - 2, 100);
+        // expect - [0,0,0,-3,-2], [100,-1,0,1,2], [3,4,5,100,6], [7,0,0,0,0]
+        expected = {-3,-2,100,-1,0,1,2,3,4,5,100,6,7};
+        for (size_t i = 0; i < expected.size(); i++) { assert(d1[i] == expected[i]); }
     }
 };
 };

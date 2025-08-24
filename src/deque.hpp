@@ -24,7 +24,7 @@ private:
     // Together, the chunks are treated as one large buffer. We keep pointers
     // to the front and back for O(1) access. As deque grows and shrinks, chunks
     // are added and removed as needed. So, compared to vector, insertion/deletion 
-    // is still O(1) on average, but resizing is faster. For instance, increasing 
+    // is still O(1) on average, but resizing is faster. For example, increasing 
     // deque's capacity is done by:
     //      - allocating a new chunk AND;
     //      - copying the chunk pointers into a new container.
@@ -302,7 +302,7 @@ public:
     public:
         T* pos;             // position in chunk
         T** chunk;          // chunk pointer
-        uint32_t chunkSize; // chunk size - TODO: replace this with compile-time variable
+        int32_t chunkSize; // chunk size - TODO: replace this with compile-time variable
 
         // typedefs - necessary for other STL functions to use this (e.g. std::sort)
         using iterator_category = std::random_access_iterator_tag;
@@ -312,7 +312,7 @@ public:
         using reference         = T&;
 
         // constructor
-        iterator(T* pos, T** chunk, uint32_t chunkSize) 
+        iterator(T* pos, T** chunk, int32_t chunkSize) 
             : pos(pos), chunk(chunk), chunkSize(chunkSize) {}
         
         // copy constructor
@@ -327,95 +327,87 @@ public:
         // comparison
         //
 
-        bool operator==(const iterator& other) const { return pos == other.pos; }
-        bool operator!=(const iterator& other) const { return pos != other.pos; }
+        bool operator==(const iterator& other) const { 
+            return chunk == other.chunk && pos == other.pos; 
+        }
+        bool operator!=(const iterator& other) const {
+            return !(*this == other);
+        }
 
         bool operator<(const iterator& other) const { 
             return chunk < other.chunk || (chunk == other.chunk && pos < other.pos);
         }
 
         bool operator<=(const iterator& other) const { 
-            return chunk < other.chunk || (chunk == other.chunk && pos <= other.pos);
+            return *this < other || *this == other;
         }
 
         bool operator>(const iterator& other) const { 
-            return chunk > other.chunk || (chunk == other.chunk && pos > other.pos);
+            return other < *this;
         }
 
         bool operator>=(const iterator& other) const { 
-            return chunk > other.chunk || (chunk == other.chunk && pos >= other.pos);
+            return !(*this < other);
         }
 
         //
         // arithmetic
         //
 
-        iterator operator+(uint32_t i) const { 
+        iterator operator+(int32_t i) const { 
             iterator newIt = *this;
             newIt += i;
             return newIt;
         }
 
-        iterator operator-(uint32_t i) const { 
+        iterator operator-(int32_t i) const { 
             iterator newIt = *this;
             newIt -= i;
             return newIt;
         }
 
-        iterator& operator+=(uint32_t i) {
-            int jumpChunks = i / chunkSize;
-            int jumpOff = i % chunkSize;
+        iterator& operator+=(int32_t i) {
+            if (i == 0) return *this;
             
-            int posOff = pos - *chunk;
-            if (chunkSize <= posOff + jumpOff) {
-                jumpChunks++;
-            }
-            posOff = (posOff + jumpOff) % chunkSize;
-
-            chunk += jumpChunks;
-            pos = *chunk + posOff;
-            return *this;
-        }
-
-        iterator& operator-=(uint32_t i) {
-            int jumpChunks = i / chunkSize;
-            int jumpOff = i % chunkSize;
-
-            int posOff = pos - *chunk;
-            if (posOff - jumpOff < 0) {
-                jumpChunks++;
-                posOff = chunkSize - jumpOff + posOff;
+            int32_t currentPos = pos - *chunk;
+            int32_t newPos = currentPos + i;
+            
+            if (newPos >= 0 && newPos < chunkSize) {
+                // move within chunk
+                pos = *chunk + newPos;
             } else {
-                posOff -= jumpOff;
+                // cross chunk boundary
+                int32_t chunkOffset = 0;
+                if (newPos >= 0) {
+                    // positive case
+                    chunkOffset = newPos / chunkSize;
+                    newPos = newPos % chunkSize;
+                } else {
+                    // negative case
+                    chunkOffset = (newPos + 1) / chunkSize - 1;
+                    newPos = newPos - chunkOffset * chunkSize;
+                }
+                
+                chunk += chunkOffset;
+                pos = *chunk + newPos;
             }
-
-            chunk -= jumpChunks;
-            pos = *chunk + posOff;
+            
             return *this;
         }
 
-        int operator-(const iterator& other) const {
-            bool isNeg = false;
-            iterator large = *this;
-            iterator small = other;
-            if (large < small) {
-                std::swap(large, small);
-                isNeg = true;
-            }
+        iterator& operator-=(int32_t i) {
+            return *this += (-i);
+        }
 
-            int jumpChunks = large.chunk - small.chunk;
-            int largeOff = large.pos - *(large.chunk);
-            int smallOff = small.pos - *(small.chunk);
-            int res = jumpChunks * chunkSize + (largeOff - smallOff);
-            if (isNeg) {
-                res *= -1;
-            }
-            return res;
+        int32_t operator-(const iterator& other) const {
+            int32_t chunkDiff = chunk - other.chunk;
+            int32_t posDiff = (pos - *chunk) - (other.pos - *(other.chunk));
+            return chunkDiff * chunkSize + posDiff;
         }
 
         // pre-increment
         iterator& operator++() { 
-            if (pos == *chunk + chunkSize - 1) {
+            if (pos - *chunk == chunkSize - 1) {
                 chunk++;
                 pos = *chunk;
             } else {
@@ -433,7 +425,7 @@ public:
 
         // pre-decrement
         iterator& operator--() {
-            if (pos == 0) {
+            if (pos == *chunk) {
                 chunk--;
                 pos = *chunk + chunkSize - 1;
             } else {
@@ -450,20 +442,11 @@ public:
         }
 
         // index
-        T& operator[](uint32_t i) const {
-            int jumpChunks = i / chunkSize;
-            int jumpOff = i % chunkSize;
-            
-            int posOff = pos - *chunk;
-            if (chunkSize <= posOff + jumpOff) {
-                jumpChunks++;
-            }
-            posOff = (posOff + jumpOff) % chunkSize;
-
-            return *(*(chunk + jumpChunks) + posOff);
+        T& operator[](int32_t i) const {
+            return *(*this + i);
         }
 
-        std::string to_string() {
+        std::string to_string() const {
             std::ostringstream oss;
             oss << "chunk front: " << *chunk << "\n";
             oss << "pos: " << pos << "\n";
@@ -473,7 +456,7 @@ public:
         }
     };
 
-    // Iterator pointing to front
+    // iterator pointing to front
     iterator begin() {
         return iterator(
             *(chunkMap + frontChunk) + frontOff, 
@@ -482,7 +465,7 @@ public:
         );
     }
 
-    // Iterator pointing to one past the back
+    // iterator pointing to one past the back
     iterator end() {
         if (backOff == chunkSize - 1) {
             return iterator(
@@ -583,7 +566,7 @@ private:
         backChunk += centerOff;
     }
 
-    // Increment chunk map position
+    // Increment given chunk map position
     void inc(uint32_t& chunk, uint32_t& off) {
         if (off == chunkSize - 1) {
             chunk++;
@@ -598,7 +581,7 @@ private:
         }
     }
 
-    // Decrement chunk map position
+    // Decrement given chunk map position
     void dec(uint32_t& chunk, uint32_t& off) {
         if (off == 0) {
             chunk--;
@@ -620,7 +603,7 @@ private:
         uint32_t currChunk = frontChunk;
         uint32_t currOff = frontOff;
         
-        // start one to left of front
+        // start one to the left of the front pointer
         dec(currChunk, currOff);
 
         // walk forwards, moving each element left one position
@@ -646,11 +629,11 @@ private:
         uint32_t currChunk = backChunk;
         uint32_t currOff = backOff;
 
-        // start one to right of back
+        // start one to the right of the back pointer
         inc(currChunk, currOff);
 
         // walk backwards, moving each element right one position
-        while (startChunk <= currChunk && startOff <= currOff) {
+        while (!(startChunk == currChunk && startOff == currOff)) {
             if (currOff > 0) {
                 chunkMap[currChunk][currOff] = std::move(chunkMap[currChunk][currOff - 1]);
                 currOff -= 1;
