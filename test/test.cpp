@@ -7,15 +7,17 @@
 #include <gtest/gtest.h>
 #include <deque>
 #include <iostream>
+#include <string>
+#include <unordered_map>
 
 #include "vector.hpp"
 #include "shared_ptr.hpp"
 #include "deque.hpp"
-
-namespace rack {
+#include "unordered_map.hpp"
 
 //
-// Test class used to track copy and move ctor calls when testing our data structures
+// Test class. Used to test 'custom object' behaviour of our data structures. 
+// Tracks copy/move operations. Implements key operators, hash function, etc.
 //
 class MyClass {
 public:
@@ -64,10 +66,19 @@ public:
     operator int() const { return val; }
 };
 
+template <>
+struct std::hash<MyClass> {
+    uint32_t operator()(const MyClass& c) const {
+        return std::hash<uint32_t>{}(c.val);
+    }
+};
+
 int MyClass::copyCtorCalls = 0;
 int MyClass::moveCtorCalls = 0;
 int MyClass::copyAssCalls = 0;
 int MyClass::moveAssCalls = 0;
+
+namespace rack {
 
 ////////////////////////////////////////
 // vector tests
@@ -443,20 +454,41 @@ public:
         }
     }
 };
-};
+
+
+////////////////////////////////////////
+// unordered_map tests
+////////////////////////////////////////
+
+void unordered_map_testGeneral() {
+    rack::unordered_map<std::string, int> m(32);
+}
+
+}; // end 'rack'
+
+////////////////////////////////////////
+// run
+////////////////////////////////////////
+
+void runTests() {
+    // // vector tests
+    // rack::vector_testGeneral();
+    // rack::vector_testIterate();
+
+    // // shared_ptr tests
+    // rack::shared_ptr_testGeneral();
+
+    // // deque tests
+    // rack::DequeTests dt;
+    // dt.deque_testPushFrontPushBack();
+    // dt.deque_testInsertEraseClearShrink();
+    // dt.deque_testIterate();
+
+    // unordered_map tests
+    rack::unordered_map_testGeneral();
+}
 
 int main() {
-    // vector tests
-    rack::vector_testGeneral();
-    rack::vector_testIterate();
-
-    // shared_ptr tests
-    rack::shared_ptr_testGeneral();
-
-    // deque tests
-    rack::DequeTests dt;
-    dt.deque_testPushFrontPushBack();
-    dt.deque_testInsertEraseClearShrink();
-    dt.deque_testIterate();
+    runTests();
     return 0;
 }

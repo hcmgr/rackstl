@@ -1,20 +1,9 @@
 #include <memory>
+#include "utils.hpp"
 
 #define PAGE_SIZE 4096
 
 namespace rack {
-
-template <typename Alloc, typename T, typename... Args>
-void allocConstruct(Alloc& alloc, T* p, Args&&... args) {
-    std::allocator_traits<Alloc>::construct(
-        alloc, p, std::forward<Args>(args)...
-    );
-}
-
-template <typename Alloc, typename T>
-void allocDestroy(Alloc& alloc, T* p) {
-    std::allocator_traits<Alloc>::destroy(alloc, p);
-}
 
 template <class T>
 class deque {
@@ -131,7 +120,7 @@ public:
         }
 
         // push copy of val
-        allocConstruct(elementAllocator, chunkMap[frontChunk] + frontOff, val);
+        utils::allocConstruct(elementAllocator, chunkMap[frontChunk] + frontOff, val);
         _size++;
     }
 
@@ -147,13 +136,13 @@ public:
         }
 
         // push copy of val
-        allocConstruct(elementAllocator, chunkMap[backChunk] + backOff, val);
+        utils::allocConstruct(elementAllocator, chunkMap[backChunk] + backOff, val);
         _size++;
     }
 
     void pop_front() {
         // de-allocate object
-        allocDestroy(elementAllocator, chunkMap[frontChunk] + frontOff);
+        utils::allocDestroy(elementAllocator, chunkMap[frontChunk] + frontOff);
         _size -= 1;
 
         // removed last element - don't move the front pointer
@@ -172,7 +161,7 @@ public:
 
     void pop_back() {
         // de-allocate object
-        allocDestroy(elementAllocator, chunkMap[backChunk] + backOff);
+        utils::allocDestroy(elementAllocator, chunkMap[backChunk] + backOff);
         _size -= 1;
 
         // removed last element - don't move the back pointer
@@ -269,7 +258,7 @@ public:
 
         // remove front element
         if (loc == begin()) {
-            allocDestroy(elementAllocator, chunkMap[frontChunk] + frontOff);
+            utils::allocDestroy(elementAllocator, chunkMap[frontChunk] + frontOff);
             chunkMap[frontChunk][frontOff] = T();
             inc(frontChunk, frontOff);
             _size--;
@@ -278,7 +267,7 @@ public:
 
         // remove back element
         if (loc == end() - 1) {
-            allocDestroy(elementAllocator, chunkMap[backChunk] + backOff);
+            utils::allocDestroy(elementAllocator, chunkMap[backChunk] + backOff);
             chunkMap[backChunk][backOff] = T();
             dec(backChunk, backOff);
             _size--;
@@ -301,7 +290,7 @@ public:
         bool left = distToFront < distToBack; // 1 - left, 0 - right
 
         // de-allocate object
-        allocDestroy(elementAllocator, chunkMap[locChunk] + locOff);
+        utils::allocDestroy(elementAllocator, chunkMap[locChunk] + locOff);
 
         if (left) {
             // shift elements in range [front, loc) in one position
