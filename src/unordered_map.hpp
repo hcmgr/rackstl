@@ -139,14 +139,22 @@ public:
         size_t currIdx = homeIdx;
         std::pair<K, V> currKv = std::make_pair(key, value);
 
+        //
         // To find a slot, move forward until either:
         //      - find empty/deleted slot, OR;
         //      - find richer slot -> steal (i.e. swap, and continue search with the new element)
-        // Available capacity is guaranteed by the load factor invariant, i.e.
+        // Available capacity before inserting is guaranteed by the load factor invariant, i.e.
         // (size > LOAD_FACTOR * capacity) => resize.
         //
         while (1) {
             Bucket& bucket = table[currIdx];
+
+            if ((bucket.state == OCCUPIED || bucket.state == DELETED) && 
+                mod(homeIdx - currIdx) == 1) {
+                // wrapped around to beginning - end search
+                return false;
+            }
+
             if (bucket.state == OCCUPIED) {
                 if (bucket.probeDist < mod(currIdx - homeIdx)) {
                     // steal
@@ -181,22 +189,33 @@ public:
 
     }
 
-    void find(const K& key) {
+    iterator find(const K& key) {
         size_t homeIdx = mod(keyHash(key));
         size_t currIdx = homeIdx;
         while (1) {
             Bucket& bucket = table[currIdx];
-            if (bucket.state == OCCUPIED) {
-                
-            } else if (bucket.state == DELETED) {
-                // found deleted slot - advance
+
+            switch (bucket.state) {
+            case OCCUPIED:
+                if (bucket.kv.first == key) {
+                    return begin();
+                }
                 currIdx = mod(currIdx + 1);
-            } else {
-                // found empty slot - not found
-                return;
+                break;
+            case DELETED:
+                currIdx = mod(currIdx + 1);
+                break;
+            case EMPTY:
+                return end();
+            default:
+                throw std::runtime_error("Unexpected bucket state - " + std::to_string(bucket.state));
+            }
+
+            if (currIdx == homeIdx) {
+                // wrapped around to beginning without finding - end search
+                return end();
             }
         }
-
     }
 
     bool contains(const K& key) {
@@ -207,10 +226,71 @@ public:
     // Bucket interface / iterator
     //////////////////////////////////////////////////////
 
+    //
+    // 'iterator' is a simple wrapper around the table pointer.
+    // Like std::unordered_map, our iterator satisfies ForwardIterator, which
+    // only requires *it, ++it / it++ and == / !=.
+    //
     class iterator {
     public:
-        iterator() {}
+        Bucket* bucketPtr;
+        Bucket* endPtr;
+
+        // typedefs - necessary for other STL functions to use this (e.g. std::sort)
+        using iterator_category = std::random_access_iterator_tag;
+        using difference_type   = std::ptrdiff_t;
+        using value_type        = std::pair<K, V>;
+        using pointer           = value_type*;
+        using reference         = value_type&;
+
+        // constructors
+        iterator() : bucketPtr(nullptr), endPtr(nullptr) {}
+        iterator(Bucket* p, Bucket* end) : bucketPtr(p), endPtr(end) {}
+        iterator(const iterator& other) : bucketPtr(other.bucketPtr) {}
+        ~iterator() {}
+
+        // copy assign
+        iterator& operator=(const iterator& other) {
+            bucketPtr = other.bucketPtr;
+        }
+
+        // reference
+        value_type operator*() const { return bucketPtr->kv; }
+        value_type* operator->() const { return &(bucketPtr->kv); }
+
+        // equality
+        bool operator==(const iterator& other) const { return bucketPtr == other.bucketPtr; }
+        bool operator!=(const iterator& other) const { return !(*this == other); }
+
+        // pre-inc
+        iterator& operator++() {
+            ++bucketPtr;
+            while (bucketPtr != endPtr && bucketPtr->state != OCCUPIED) {
+                ++bucketPtr;
+            }
+            return *this;
+        } 
+
+        // post-inc
+        iterator operator++(int) {
+            iterator tmp = *this;
+            ++(*this);
+            return tmp;
+        }
     };
+
+    iterator begin() {
+        Bucket* startPtr = table;
+        Bucket* endPtr = table + _capacity;
+        while (startPtr != endPtr && startPtr->state != OCCUPIED) {
+            startPtr++;
+        }
+        return iterator(startPtr, endPtr);
+    }
+
+    iterator end() {
+        return iterator(table + _capacity, table + _capacity);
+    }
 
     //////////////////////////////////////////////////////
     // Hash policy

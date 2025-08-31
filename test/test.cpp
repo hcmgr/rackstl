@@ -461,7 +461,17 @@ public:
 ////////////////////////////////////////
 
 void unordered_map_testGeneral() {
-    rack::unordered_map<std::string, int> m(32);
+    rack::unordered_map<std::string, int> m(128);
+    for (int i = 0; i < 64; i++) {
+        m.insert("monkey:" + std::to_string(i), i);
+    }
+
+    auto it = m.begin();
+    while (!(it == m.end())) {
+        std::cout << it->first << " " << it->second << "\n";
+        it++;
+    }
+    std::cout << m.to_string() << "\n";
 }
 
 }; // end 'rack'
