@@ -461,17 +461,45 @@ public:
 ////////////////////////////////////////
 
 void unordered_map_testGeneral() {
-    rack::unordered_map<std::string, int> m(128);
-    for (int i = 0; i < 64; i++) {
-        m.insert("monkey:" + std::to_string(i), i);
+    int N = 2 << 12;
+    rack::unordered_map<std::string, int> m(N);
+    int oneBeforeMaxLoadFactor = m.maxLoadFactor() * float(N);
+    for (int i = 0; i < oneBeforeMaxLoadFactor; i++) {
+        m.insert("monkey" + std::to_string(i), i);
     }
 
-    auto it = m.begin();
-    while (!(it == m.end())) {
-        std::cout << it->first << " " << it->second << "\n";
-        it++;
-    }
-    std::cout << m.to_string() << "\n";
+    assert(m.size() == oneBeforeMaxLoadFactor);
+    assert(m.capacity() == N);
+
+    // search
+    auto it = m.find("monkey0");
+    assert(it->first == "monkey0" && it->second == 0);
+    it = m.find("bonobo0");
+    assert(it == m.end());
+
+    assert(m.contains("monkey0"));
+    assert(!m.contains("bonobo0"));
+
+    // insert to cause resize/rehash
+    m.insert("bonobo0", 0);
+    assert(m.find("bonobo0") != m.end());
+    assert(m.capacity() == 2*N);
+
+    // clear
+    m.clear();
+    assert(m.size() == 0);
+    assert(m.empty() == true);
+
+    // [] insert
+
+    // erase
+
+    // verify robin hood internals work correctly (i.e. stealing is correct)
+    // note: separate test for this
+
+    // test iterator
+    // note: separate test for this
+
 }
 
 }; // end 'rack'

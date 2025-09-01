@@ -19,7 +19,7 @@ private:
 
     struct Bucket {
         std::pair<K, V> kv;
-        uint32_t probeDist;
+        size_t probeDist;
         BucketState state;
 
         Bucket() : kv(), probeDist(0), state(EMPTY) {}
@@ -28,6 +28,7 @@ private:
     Bucket* table;
     size_t _size;
     size_t _capacity;
+    float _maxLoadFactor = 0.75f;
 
     std::allocator<Bucket> tableAllocator;
 
@@ -45,14 +46,14 @@ public:
 
     unordered_map(size_t initCapacity) {
         if (initCapacity > MAX_CAPACITY) {
-            // too large
+            // capacity too large
             throw std::runtime_error(
                 "Requested capacity too large: " + std::to_string(initCapacity) + " (max=" + std::to_string(MAX_CAPACITY) + ")"
             );
         }
 
         if ((initCapacity & (initCapacity - 1)) != 0) {
-            // not divisible by 2
+            // capacity not divisible by 2
             throw std::runtime_error(
                 "Custom capacity must be divisible by 2"
             );
@@ -67,7 +68,7 @@ public:
             utils::allocConstruct(tableAllocator, table + i);
         }
 
-        keyHash = std::hash<K>{};
+        keyHash = std::hash<K>{}; 
     }
 
     unordered_map(std::initializer_list<std::pair<const K, V>> init) {
@@ -115,6 +116,7 @@ public:
     //////////////////////////////////////////////////////
     bool empty() const { return _size == 0; }
     size_t size() const { return _size; }
+    size_t capacity() const { return _capacity; }
     size_t max_size() const { return MAX_CAPACITY; }
 
     //////////////////////////////////////////////////////
@@ -124,18 +126,25 @@ public:
         for (size_t i = 0; i < _capacity; i++) {
             Bucket& b = table[i];
             if (b.state == OCCUPIED) {
-                utils::allocDestroy(tableAllocator, b.kv);
+                utils::allocDestroy(tableAllocator, &b.kv);
                 b.state = EMPTY;
                 b.probeDist = 0;
+                _size--;
             } else if (b.state == DELETED) {
                 b.state = EMPTY;
                 b.probeDist = 0;
             }
         }
+        assert(_size == 0);
     }
 
-    bool insert(const K& key, const V& value) {
-        size_t homeIdx = mod(keyHash(key)); 
+    std::pair<iterator, bool> insert(const K& key, const V& value) {
+        if (loadFactor() >= _maxLoadFactor) {
+            // max load factor exceeded - resize with table of 2x capacity
+            rehash(_capacity * 2);
+        }
+
+        size_t homeIdx = mod(keyHash(key), _capacity); 
         size_t currIdx = homeIdx;
         std::pair<K, V> currKv = std::make_pair(key, value);
 
@@ -149,33 +158,43 @@ public:
         while (1) {
             Bucket& bucket = table[currIdx];
 
-            if ((bucket.state == OCCUPIED || bucket.state == DELETED) && 
-                mod(homeIdx - currIdx) == 1) {
-                // wrapped around to beginning - end search
-                return false;
-            }
+            switch (bucket.state) {
+            case OCCUPIED:
+                if (bucket.kv.first == key) {
+                    // key alread exists - return early
+                    std::cout << "key already exists" << "\n";
+                    return {iterator(table + currIdx, table + _capacity), true};
+                }
 
-            if (bucket.state == OCCUPIED) {
-                if (bucket.probeDist < mod(currIdx - homeIdx)) {
+                if (bucket.probeDist < mod(currIdx - homeIdx, _capacity)) {
                     // steal
                     std::swap(bucket.kv, currKv);
-                    bucket.probeDist = mod(currIdx - homeIdx);
-                    homeIdx = mod(keyHash(currKv.first));
-                    currIdx = mod(currIdx + 1);
+                    bucket.probeDist = mod(currIdx - homeIdx, _capacity);
+                    homeIdx = mod(keyHash(currKv.first), _capacity);
+                    currIdx = mod(currIdx + 1, _capacity);
                 } else {
                     // advance
-                    currIdx = mod(currIdx + 1);
+                    currIdx = mod(currIdx + 1, _capacity);
                 }
-            } else {
+                break;
+            case EMPTY:
+            case DELETED:
                 // found empty/deleted slot - greedily use it
                 bucket.kv = currKv;
                 bucket.probeDist = currIdx - homeIdx;
                 bucket.state = OCCUPIED;
-                break;
+                _size++;
+                return {iterator(table + currIdx, table + _capacity), true};
+            default:
+                throw std::runtime_error("Unexpected bucket state - " + std::to_string(bucket.state));
+            }
+
+            if (currIdx == homeIdx) {
+                // wrapped around to beginning without finding free slot - end search
+                // note: should never happen due to the load factor invariant
+                return {end(), false};
             }
         }
-        _size++;
-        return true;
     }
 
     bool erase(const K& key) {
@@ -185,12 +204,23 @@ public:
     //////////////////////////////////////////////////////
     // Lookup / accessors
     //////////////////////////////////////////////////////
-    V& operator[](const K& key) {
 
+    //
+    // Returns reference to value of `key`, performing an insertion if key doesn't 
+    // already exist.
+    //
+    V& operator[](const K& key) {
+        auto [it, _] = insert(key, V{});
+        return it->second;
+    }
+
+    V& operator[](K&& key) {
+        auto [it, _] = insert(std::move(key), V{});  
+        return it->second;
     }
 
     iterator find(const K& key) {
-        size_t homeIdx = mod(keyHash(key));
+        size_t homeIdx = mod(keyHash(key), _capacity);
         size_t currIdx = homeIdx;
         while (1) {
             Bucket& bucket = table[currIdx];
@@ -198,12 +228,12 @@ public:
             switch (bucket.state) {
             case OCCUPIED:
                 if (bucket.kv.first == key) {
-                    return begin();
+                    return iterator(table + currIdx, table + _capacity);
                 }
-                currIdx = mod(currIdx + 1);
+                currIdx = mod(currIdx + 1, _capacity);
                 break;
             case DELETED:
-                currIdx = mod(currIdx + 1);
+                currIdx = mod(currIdx + 1, _capacity);
                 break;
             case EMPTY:
                 return end();
@@ -219,7 +249,7 @@ public:
     }
 
     bool contains(const K& key) {
-
+        return find(key) != end();
     }
 
     //////////////////////////////////////////////////////
@@ -252,7 +282,12 @@ public:
         // copy assign
         iterator& operator=(const iterator& other) {
             bucketPtr = other.bucketPtr;
+            return *this;
         }
+
+        //
+        // ForwardIterator operators
+        //
 
         // reference
         value_type operator*() const { return bucketPtr->kv; }
@@ -277,6 +312,23 @@ public:
             ++(*this);
             return tmp;
         }
+
+        //
+        // Other operators - implemented for internal use
+        //
+
+        iterator& operator+=(size_t i) {
+            while (i-- > 0) {
+                ++(*this);
+            }
+            return *this;
+        }
+
+        iterator operator+(size_t i) {
+            iterator newIt = *this;
+            newIt += i;
+            return newIt;
+        }
     };
 
     iterator begin() {
@@ -295,6 +347,51 @@ public:
     //////////////////////////////////////////////////////
     // Hash policy
     //////////////////////////////////////////////////////
+
+    float loadFactor() {
+        return static_cast<float>(_size) / static_cast<float>(_capacity);
+    }
+
+    float maxLoadFactor() {
+        return _maxLoadFactor;
+    }
+
+    //
+    // Changes number of buckets, with a lower-bound of `n`.
+    // If `n` doesn't satisfy the load factor invariant, `n` is bumped
+    // up to 2*_size (i.e. load factor of 0.5)
+    //
+    void rehash(size_t n) {
+        if (!loadFactorSatisfied(n)) {
+            n = 2 * _size;
+        }
+
+        Bucket* oldTable = table;
+        size_t oldSize = _size;
+        size_t oldCapacity = _capacity;
+
+        // initialise new table
+        table = tableAllocator.allocate(n);
+        _size = 0;
+        _capacity = n;
+        for (size_t i = 0; i < _capacity; i++) {
+            utils::allocConstruct(tableAllocator, table + i);
+        }
+
+        // copy buckets from previous table and free old table resources
+        for (size_t i = 0; i < oldCapacity; i++) {
+            Bucket& bucket = oldTable[i];
+            if (bucket.state == OCCUPIED) {
+                insert(bucket.kv.first, bucket.kv.second);
+                utils::allocDestroy(tableAllocator, &bucket.kv);
+            }
+        }
+        tableAllocator.deallocate(oldTable, oldCapacity);
+    }
+
+    void reserve(size_t n) {
+
+    }
 
     //////////////////////////////////////////////////////
     // Observers
@@ -332,12 +429,18 @@ public:
     // Helpers 
     //////////////////////////////////////////////////////
 
+private:
     //
     // Fast modulo (i.e. equivalent to key % _capacity). 
     // Only works if _capacity is a power of two.
     //
-    size_t mod(int idx) {
-        return idx & (_capacity - 1);
+    size_t mod(int idx, size_t N) {
+        return idx & (N - 1);
+    }
+
+    // Returns true if bucket count `n` satisfies the load factor invariant, false otherwise.
+    bool loadFactorSatisfied(size_t n) {
+        return _maxLoadFactor * static_cast<float>(n) > static_cast<float>(_size);
     }
 };
 }; // end of 'rack'
