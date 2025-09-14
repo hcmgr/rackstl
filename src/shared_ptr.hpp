@@ -1,14 +1,20 @@
+#include <atomic>
+
 namespace rack {
 
 template <class T>
 class shared_ptr {
 private:
 
-    // control block shared by each shared_ptr referencing `ptr`
+    //
+    // Control block is shared by each shared_ptr referencing `ptr`.
+    // Note that atomics are used for strong and weak count to ensure 
+    // thread safety.
+    //
     struct SharedPtrControlBlock {
 
-        uint32_t strongCnt;
-        uint32_t weakCnt;
+        std::atomic<uint32_t> strongCnt;
+        std::atomic<uint32_t> weakCnt;
 
         SharedPtrControlBlock()
             : strongCnt(0), weakCnt(0) {}
@@ -31,7 +37,7 @@ public:
     shared_ptr(T* p) {
         ptr = p;
         controlBlock = new SharedPtrControlBlock();
-        controlBlock->strongCnt++;
+        controlBlock->strongCnt.fetch_add(1, std::memory_order_relaxed);
     }
 
     ~shared_ptr() {
@@ -42,28 +48,41 @@ public:
     shared_ptr(const shared_ptr& other) {
         ptr = other.ptr;
         controlBlock = other.controlBlock;
-        controlBlock->strongCnt++;
+        controlBlock->strongCnt.fetch_add(1, std::memory_order_relaxed);
     }
 
     // Move constructor
-    shared_ptr(const shared_ptr&& other) {
-
+    shared_ptr(shared_ptr&& other) {
+        ptr = other.ptr;
+        controlBlock = other.controlBlock;
+        other.ptr = nullptr;
+        other.controlBlock = nullptr;
     }
 
     // Copy assignment
     shared_ptr<T>& operator=(const shared_ptr<T>& other) {
-        reset();
-
-        ptr = other.ptr;
-        controlBlock = other.controlBlock;
-        if (controlBlock) { // `other` could be a null shared_ptr (perfectly valid)
-            controlBlock->strongCnt++;
+        if (this != &other) {
+            reset();
+            ptr = other.ptr;
+            controlBlock = other.controlBlock;
+            if (controlBlock) { // `other` could be a null shared_ptr (perfectly valid)
+                controlBlock->strongCnt.fetch_add(1, std::memory_order_relaxed);
+            }
         }
-
         return *this;
     }
 
-    // TODO: move assignment
+    // Move assignment
+    shared_ptr& operator=(shared_ptr&& other) {
+        if (this != &other) {
+            reset();
+            ptr = other.ptr;
+            controlBlock = other.controlBlock;
+            other.ptr = nullptr;
+            other.controlBlock = nullptr;
+        }
+        return *this;
+    }
 
     //////////////////////////////////////////////////////
     // Modifiers
@@ -80,13 +99,14 @@ public:
         if (newPtr) {
             ptr = newPtr;
             controlBlock = new SharedPtrControlBlock();
-            controlBlock->strongCnt++;
+            controlBlock->strongCnt.fetch_add(1, std::memory_order_relaxed);
         }
     }
 
     // Swap pointers to managed object with `other`.
     void swap(shared_ptr& other) {
         std::swap(ptr, other.ptr);
+        std::swap(controlBlock, other.controlBlock);
     }
 
     //////////////////////////////////////////////////////
@@ -104,11 +124,11 @@ public:
         if (controlBlock == nullptr) {
             return 0;
         }
-        return controlBlock->strongCnt;
+        return controlBlock->strongCnt.load(std::memory_order_relaxed);
     }
 
     bool unique() {
-        return controlBlock && controlBlock->strongCnt == 1;
+        return controlBlock && controlBlock->strongCnt.load(std::memory_order_relaxed) == 1;
     }
 
     operator bool() const {
@@ -128,15 +148,17 @@ private:
             return; 
         }
 
-        controlBlock->strongCnt--;
-        if (controlBlock->strongCnt == 0) {
+        uint32_t oldStrongCnt = controlBlock->strongCnt.fetch_sub(1, std::memory_order_relaxed);
+        if (oldStrongCnt == 1) {
 
-            // no owning references left - free managed object
+            // we were last owner - free pointer
             delete ptr;
+            ptr = nullptr;
 
             // also no non-owning references left - free control block
-            if (controlBlock->weakCnt == 0) {
+            if (controlBlock->weakCnt.load() == 0) {
                 delete controlBlock;
+                controlBlock = nullptr;
             }
         }
     }

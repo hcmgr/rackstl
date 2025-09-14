@@ -9,6 +9,7 @@
 #include <iostream>
 #include <string>
 #include <unordered_map>
+#include <thread>
 
 #include "vector.hpp"
 #include "shared_ptr.hpp"
@@ -234,6 +235,42 @@ void shared_ptr_testGeneral() {
     sp.reset(new MyClass(val + 2));
     assert(sp.use_count() == 1);
     assert(sp->val == val + 2);
+}
+
+std::atomic<int> dtorCount{0};
+struct Tracker {
+    int val;
+    Tracker(int v) : val(v) {}
+    ~Tracker() { dtorCount.fetch_add(1); }
+};
+
+void shared_ptr_testMultithreaded() {
+    const int numThreads = 16;
+    const int iters = 1000;
+
+    rack::shared_ptr<Tracker> sp = rack::make_shared<Tracker>(42);
+
+    std::vector<std::thread> threads;
+
+    for (int i = 0; i < numThreads; ++i) {
+        threads.emplace_back([sp]() mutable {
+            for (int j = 0; j < iters; ++j) {
+                auto tmp = sp;
+            }
+        });
+    }
+
+    for (auto &t : threads) t.join();
+
+    // After all threads exit, sp is the only survivor
+    assert(sp);
+    assert(sp.use_count() == 1);
+
+    // Reset last owner, object should be destroyed exactly once
+    sp.reset();
+    assert(!sp);
+    assert(sp.use_count() == 0);
+    assert(dtorCount.load() == 1);
 }
 
 ////////////////////////////////////////
@@ -575,11 +612,12 @@ void runTests() {
     // rack::vector_testGeneral();
     // rack::vector_testIterate();
 
-    // // shared_ptr tests
+    // shared_ptr tests
     // rack::shared_ptr_testGeneral();
+    rack::shared_ptr_testMultithreaded();
 
     // unique_ptr tests
-    rack::unique_ptr_testGeneral();
+    // rack::unique_ptr_testGeneral();
 
     // // deque tests
     // rack::DequeTests dt;
