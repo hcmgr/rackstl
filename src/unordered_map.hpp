@@ -138,15 +138,15 @@ public:
         assert(_size == 0);
     }
 
-    std::pair<iterator, bool> insert(const K& key, const V& value) {
+    std::pair<iterator, bool> insert(std::pair<K, V> kv) {
         if (loadFactor() >= _maxLoadFactor) {
             // max load factor exceeded - resize with table of 2x capacity
             rehash(_capacity * 2);
         }
 
-        size_t homeIdx = mod(keyHash(key), _capacity); 
+        size_t homeIdx = mod(keyHash(kv.first), _capacity); 
         size_t currIdx = homeIdx;
-        std::pair<K, V> currKv = std::make_pair(key, value);
+        std::pair<K, V> currKv = kv;
 
         //
         // To find a slot, move forward until either:
@@ -160,7 +160,7 @@ public:
 
             switch (bucket.state) {
             case OCCUPIED:
-                if (bucket.kv.first == key) {
+                if (bucket.kv.first == currKv.first) {
                     // key alread exists - return early
                     std::cout << "key already exists" << "\n";
                     return {iterator(table + currIdx, table + _capacity), true};
@@ -197,25 +197,47 @@ public:
         }
     }
 
-    bool erase(const K& key) {
+    iterator erase(iterator pos) {
+        if (pos < begin() || pos >= end()) {
+            throw std::runtime_error("iterator invalid");
+        }
 
+        iterator next = pos + 1;
+
+        Bucket& bucket = *(pos.bucketPtr);
+        utils::allocDestroy(tableAllocator, &(bucket.kv));
+        bucket.state = EMPTY;
+
+        return next;
+    }
+
+    iterator erase(const K& key) {
+        return erase(find(key));
     }
 
     //////////////////////////////////////////////////////
     // Lookup / accessors
     //////////////////////////////////////////////////////
 
+    V& at(const K& key) {
+        auto it = find(key);
+        if (it == end()) {
+            throw std::out_of_range("Key not in map");
+        }
+        return it->second;
+    }
+
     //
     // Returns reference to value of `key`, performing an insertion if key doesn't 
     // already exist.
     //
     V& operator[](const K& key) {
-        auto [it, _] = insert(key, V{});
+        auto [it, _] = insert({key, V{}});
         return it->second;
     }
 
     V& operator[](K&& key) {
-        auto [it, _] = insert(std::move(key), V{});  
+        auto [it, _] = insert({std::move(key), V{}});  
         return it->second;
     }
 
@@ -262,9 +284,10 @@ public:
     // only requires *it, ++it / it++ and == / !=.
     //
     class iterator {
-    public:
+    private:
         Bucket* bucketPtr;
         Bucket* endPtr;
+    public:
 
         // typedefs - necessary for other STL functions to use this (e.g. std::sort)
         using iterator_category = std::random_access_iterator_tag;
@@ -382,7 +405,7 @@ public:
         for (size_t i = 0; i < oldCapacity; i++) {
             Bucket& bucket = oldTable[i];
             if (bucket.state == OCCUPIED) {
-                insert(bucket.kv.first, bucket.kv.second);
+                insert({bucket.kv.first, bucket.kv.second});
                 utils::allocDestroy(tableAllocator, &bucket.kv);
             }
         }

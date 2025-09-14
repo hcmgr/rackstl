@@ -1,8 +1,16 @@
 #include "vector.hpp"
+#include "shared_ptr.hpp"
+#include "unique_ptr.hpp"
 #include "deque.hpp"
+
 
 #include <algorithm>
 #include <random>
+
+struct MyClass {
+    int val;
+    MyClass(int v) : val(v) {}
+};
 
 ////////////////////////////////////////
 // vector benchmarks
@@ -121,6 +129,98 @@ void vector_benchmarkIterate() {
 //     auto rackDuration = timedSort(rackVec);
 //     std::cout << "rack::vector sort time: " << rackDuration << " ms\n";
 // }
+
+void shared_ptr_bench() {
+    const int N = 1'000'000;
+
+    //
+    // std::shared_ptr
+    //
+    {
+        auto start = std::chrono::high_resolution_clock::now();
+
+        for (int i = 0; i < N; ++i) {
+            auto sp = std::make_shared<MyClass>(i);
+            if (i % 2 == 0) {
+                auto sp2 = sp;              // copy (inc refcount)
+            } else {
+                sp.reset(new MyClass(i));   // reset with new
+            }
+        }
+
+        auto end = std::chrono::high_resolution_clock::now();
+        std::chrono::duration<double> elapsed = end - start;
+        std::cout << "std::shared_ptr create/copy/reset " << N
+                  << " objects: " << elapsed.count() << " seconds\n";
+    }
+
+    //
+    // rack::shared_ptr
+    //
+    {
+        auto start = std::chrono::high_resolution_clock::now();
+
+        for (int i = 0; i < N; ++i) {
+            auto sp = rack::make_shared<MyClass>(i);
+            if (i % 2 == 0) {
+                auto sp2 = sp;              // copy (inc refcount)
+            } else {
+                sp.reset(new MyClass(i));   // reset with new
+            }
+        }
+
+        auto end = std::chrono::high_resolution_clock::now();
+        std::chrono::duration<double> elapsed = end - start;
+        std::cout << "rack::shared_ptr create/copy/reset " << N
+                  << " objects: " << elapsed.count() << " seconds\n";
+    }
+}
+
+void unique_ptr_bench() {
+    const int N = 1'000'000;
+
+    //
+    // std::unique_ptr
+    //
+    {
+        auto start = std::chrono::high_resolution_clock::now();
+
+        for (int i = 0; i < N; ++i) {
+            auto up = std::make_unique<MyClass>(i);
+            if (i % 2 == 0) {
+                auto up2 = std::move(up);   // move
+            } else {
+                up.reset(new MyClass(i));  // reset with new
+            }
+        }
+
+        auto end = std::chrono::high_resolution_clock::now();
+        std::chrono::duration<double> elapsed = end - start;
+        std::cout << "std::unique_ptr create/move/reset " << N
+                  << " objects: " << elapsed.count() << " seconds\n";
+    }
+
+    //
+    // rack::unique_ptr
+    //
+    {
+        auto start = std::chrono::high_resolution_clock::now();
+
+        for (int i = 0; i < N; ++i) {
+            auto up = rack::make_unique<MyClass>(i);
+            if (i % 2 == 0) {
+                auto up2 = std::move(up);   // move
+            } else {
+                up.reset(new MyClass(i));  // reset with new
+            }
+        }
+
+        auto end = std::chrono::high_resolution_clock::now();
+        std::chrono::duration<double> elapsed = end - start;
+        std::cout << "rack::unique_ptr create/move/reset " << N
+                  << " objects: " << elapsed.count() << " seconds\n";
+    }
+}
 
 ////////////////////////////////////////
 // deque benchmarks
@@ -303,9 +403,12 @@ int main() {
     // vector_benchmarkIterate();
     // vector_benchSort();
 
-    deque_benchPush();
-    deque_benchIterate();
+    shared_ptr_bench();
+    // unique_ptr_bench();
+
+    // deque_benchPush();
+    // deque_benchIterate();
     // deque_benchSort();
-    deque_benchRandomAccess();
+    // deque_benchRandomAccess();
     return 0;
 }

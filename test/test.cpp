@@ -12,6 +12,7 @@
 
 #include "vector.hpp"
 #include "shared_ptr.hpp"
+#include "unique_ptr.hpp"
 #include "deque.hpp"
 #include "unordered_map.hpp"
 
@@ -234,6 +235,64 @@ void shared_ptr_testGeneral() {
     assert(sp.use_count() == 1);
     assert(sp->val == val + 2);
 }
+
+////////////////////////////////////////
+// unique_ptr tests
+////////////////////////////////////////
+void unique_ptr_testGeneral() {
+    int val = 1;
+
+    // construct
+    rack::unique_ptr<MyClass> p1(new MyClass(val));
+    assert(p1);
+    assert(p1->val == val);
+    assert((*p1).val == val);
+
+    // move construct
+    rack::unique_ptr<MyClass> p1new = std::move(p1);
+    assert(!p1);                  // old one released
+    assert(p1new);                // new one owns
+    assert(p1new->val == val);
+
+    // move assign
+    rack::unique_ptr<MyClass> p2;
+    p2 = std::move(p1new);
+    assert(!p1new);
+    assert(p2);
+    assert(p2->val == val);
+
+    // release
+    MyClass* raw = p2.release();
+    assert(!p2);              // p2 no longer owns anything
+    assert(raw->val == val);
+
+    // reset with new object
+    p2.reset(new MyClass(val + 1));
+    assert(p2);
+    assert(p2->val == val + 1);
+
+    // reset to null
+    p2.reset();
+    assert(!p2);
+
+    // swap
+    rack::unique_ptr<MyClass> p3(new MyClass(val + 2));
+    rack::unique_ptr<MyClass> p4(new MyClass(val + 3));
+    p3.swap(p4);
+    assert(p3->val == val + 3);
+    assert(p4->val == val + 2);
+
+    // make_unique
+    auto p5 = rack::make_unique<MyClass>(val + 4);
+    assert(p5);
+    assert(p5->val == val + 4);
+
+    // boolean conversion
+    assert(p5);
+    p5.reset();
+    assert(!p5);
+}
+
 
 ////////////////////////////////////////
 // deque tests
@@ -465,30 +524,33 @@ void unordered_map_testGeneral() {
     rack::unordered_map<std::string, int> m(N);
     int oneBeforeMaxLoadFactor = m.maxLoadFactor() * float(N);
     for (int i = 0; i < oneBeforeMaxLoadFactor; i++) {
-        m.insert("monkey" + std::to_string(i), i);
+        m.insert({"monkey" + std::to_string(i), i});
     }
 
-    assert(m.size() == oneBeforeMaxLoadFactor);
-    assert(m.capacity() == N);
+    ASSERT_TRUE(m.size() == oneBeforeMaxLoadFactor);
+    ASSERT_TRUE(m.capacity() == N);
 
     // search
     auto it = m.find("monkey0");
-    assert(it->first == "monkey0" && it->second == 0);
-    it = m.find("bonobo0");
-    assert(it == m.end());
+    ASSERT_TRUE(it->first == "monkey0" && it->second == 0);
+    ASSERT_TRUE(m.at("monkey0") == 0);
 
-    assert(m.contains("monkey0"));
-    assert(!m.contains("bonobo0"));
+    it = m.find("bonobo0");
+    ASSERT_TRUE(it == m.end());
+    ASSERT_THROW(m.at("bonobo0"), std::out_of_range);
+
+    ASSERT_TRUE(m.contains("monkey0"));
+    ASSERT_TRUE(!m.contains("bonobo0"));
 
     // insert to cause resize/rehash
-    m.insert("bonobo0", 0);
-    assert(m.find("bonobo0") != m.end());
-    assert(m.capacity() == 2*N);
+    m.insert({"bonobo0", 0});
+    ASSERT_TRUE(m.find("bonobo0") != m.end());
+    ASSERT_TRUE(m.capacity() == 2*N);
 
     // clear
     m.clear();
-    assert(m.size() == 0);
-    assert(m.empty() == true);
+    ASSERT_TRUE(m.size() == 0);
+    ASSERT_TRUE(m.empty() == true);
 
     // [] insert
 
@@ -516,6 +578,9 @@ void runTests() {
     // // shared_ptr tests
     // rack::shared_ptr_testGeneral();
 
+    // unique_ptr tests
+    rack::unique_ptr_testGeneral();
+
     // // deque tests
     // rack::DequeTests dt;
     // dt.deque_testPushFrontPushBack();
@@ -523,7 +588,7 @@ void runTests() {
     // dt.deque_testIterate();
 
     // unordered_map tests
-    rack::unordered_map_testGeneral();
+    // rack::unordered_map_testGeneral();
 }
 
 int main() {

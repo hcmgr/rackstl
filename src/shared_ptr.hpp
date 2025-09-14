@@ -98,7 +98,7 @@ public:
     }
 
     T& operator*() const { return *ptr; }
-    T* operator->()  const { return ptr; }
+    T* operator->() const { return ptr; }
 
     uint32_t use_count() {
         if (controlBlock == nullptr) {
