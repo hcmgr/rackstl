@@ -35,9 +35,6 @@ private:
     std::allocator<T*> chunkAllocator;
     std::allocator<T> elementAllocator;
 
-    // friend class DequeTests; // for debugging purposes
-    friend class DequeTests;
-
 public:
 
     //////////////////////////////////////////////////////

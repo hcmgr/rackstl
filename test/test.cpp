@@ -19,7 +19,7 @@
 
 //
 // Test class. Used to test 'custom object' behaviour of our data structures. 
-// Tracks copy/move operations. Implements key operators, hash function, etc.
+// Tracks copy / move operations. Implements key operators, hash function, etc.
 //
 class MyClass {
 public:
@@ -86,7 +86,7 @@ namespace rack {
 // vector tests
 ////////////////////////////////////////
 
-void vector_testGeneral() {
+TEST(vector_test, general) {
 
     //
     // test vector of standard type (i.e. 'int')
@@ -94,10 +94,10 @@ void vector_testGeneral() {
 
     rack::vector<int> vec1;
 
-    assert(vec1.empty() == true);
-    assert(vec1.capacity() == 0);
-    assert(vec1.size() == 0);
-    assert(vec1.data() == nullptr);
+    EXPECT_TRUE(vec1.empty());
+    EXPECT_EQ(vec1.capacity(), 0);
+    EXPECT_EQ(vec1.size(), 0);
+    EXPECT_EQ(vec1.data(), nullptr);
 
     int n = 10000;
     for (int i = 0; i < n; i++) {
@@ -105,10 +105,10 @@ void vector_testGeneral() {
     }
 
     int expectedCapacity = 1 << ((int)std::log2(n) + 1);
-    assert(vec1.capacity() == expectedCapacity);
-    assert(vec1.size() == n);
+    EXPECT_EQ(vec1.capacity(), expectedCapacity);
+    EXPECT_EQ(vec1.size(), n);
     for (int i = 0; i < n; i++) {
-        assert(vec1[i] == i);
+        EXPECT_EQ(vec1[i], i);
     }
 
     // //
@@ -120,8 +120,8 @@ void vector_testGeneral() {
     // // use copy and move constructor calls to validate push_back behaviour
     // int& copyCtorCount = MyClass::copyCtorCalls = 0;
     // int& moveCtorCount = MyClass::moveCtorCalls = 0;
-    // int& copyAssCount = MyClass::copyCtorCalls = 0;
-    // int& moveAssCount = MyClass::moveCtorCalls = 0;
+    // int& copyAssCount  = MyClass::copyCtorCalls = 0;
+    // int& moveAssCount  = MyClass::moveCtorCalls = 0;
     
     // n = 100;
     // for (int i = 0; i < n; i++) {
@@ -136,11 +136,11 @@ void vector_testGeneral() {
     //     vec2.push_back(std::move(m));
 
     //     std::cout << expCopyCount << " " << copyCtorCount + copyAssCount << "\n";
-    //     assert(expCopyCount == copyCtorCount + copyAssCount);
+    //     EXPECT_EQ(expCopyCount, copyCtorCount + copyAssCount);
     // }
 }
 
-void vector_testIterate() {
+TEST(vector_test, iterate) {
     int n = 10;
     rack::vector<int> vec1;
     for (int i = 0; i < n; ++i) {
@@ -156,30 +156,30 @@ void vector_testIterate() {
     std::for_each(vec1.begin(), vec1.end(), [](int& w) { w++; });
 
     // arithmetic and comparison
-    assert(vec1.begin() != vec1.end());
-    assert(vec1.begin() < vec1.end());
-    assert(vec1.begin() + n == vec1.end());
-    assert(vec1.end() - n == vec1.begin());
+    EXPECT_NE(vec1.begin(), vec1.end());
+    EXPECT_LT(vec1.begin(), vec1.end());
+    EXPECT_EQ(vec1.begin() + n, vec1.end());
+    EXPECT_EQ(vec1.end() - n, vec1.begin());
 
     rack::vector<int>::iterator it1 = vec1.begin();
     for (int i = 0; i < n; i++) {
         it1++;
     }
-    assert(it1 == vec1.end());
+    EXPECT_EQ(it1, vec1.end());
 
     it1 = vec1.begin();
     it1 += n;
-    assert(it1 == vec1.end());
+    EXPECT_EQ(it1, vec1.end());
 
-    assert(n == std::distance(vec1.begin(), vec1.end()));
+    EXPECT_EQ(n, std::distance(vec1.begin(), vec1.end()));
 
     // access / dereference
     rack::vector<MyClass> vec2;
     vec2.push_back(MyClass(0));
     rack::vector<MyClass>::iterator it2 = vec2.begin();
-    assert((*it2).val == vec2[0].val);
-    assert(it2->val == vec2[0].val);
-    assert(it2[0].val == vec2[0].val);
+    EXPECT_EQ((*it2).val, vec2[0].val);
+    EXPECT_EQ(it2->val, vec2[0].val);
+    EXPECT_EQ(it2[0].val, vec2[0].val);
 
     // sort
     rack::vector<int> vec3;
@@ -190,51 +190,51 @@ void vector_testIterate() {
         vec3.push_back(dist(gen));
     }
     std::sort(vec3.begin(), vec3.end());
-    assert(std::is_sorted(vec3.begin(), vec3.end()));
+    EXPECT_TRUE(std::is_sorted(vec3.begin(), vec3.end()));
 }
 
 ////////////////////////////////////////
 // shared_ptr tests
 ////////////////////////////////////////
 
-void shared_ptr_testGeneral() {
+TEST(shared_ptr_test, general) {
     int val = 1;
     rack::shared_ptr<MyClass> sp = rack::make_shared<MyClass>(val);
     rack::shared_ptr<MyClass> sp1 = sp;
     rack::shared_ptr<MyClass> sp2 = sp;
 
-    assert(sp.use_count() == 3);
-    assert(sp1.use_count() == 3);
-    assert(sp2.use_count() == 3);
+    EXPECT_EQ(sp.use_count(), 3);
+    EXPECT_EQ(sp1.use_count(), 3);
+    EXPECT_EQ(sp2.use_count(), 3);
 
     sp2.reset();
-    assert(sp2.get() == nullptr);
-    assert(sp.use_count() == 2);
+    EXPECT_EQ(sp2.get(), nullptr);
+    EXPECT_EQ(sp.use_count(), 2);
 
     sp1.reset();
-    assert(sp.use_count() == 1);
-    assert(sp.unique());
+    EXPECT_EQ(sp.use_count(), 1);
+    EXPECT_TRUE(sp.unique());
 
-    assert(sp->val == val);
-    assert((*sp).val == val);
+    EXPECT_EQ(sp->val, val);
+    EXPECT_EQ((*sp).val, val);
     sp.reset();
-    assert(!sp);
-    assert(sp.use_count() == 0);
+    EXPECT_FALSE(sp);
+    EXPECT_EQ(sp.use_count(), 0);
     sp.reset();
 
     sp = rack::make_shared<MyClass>(val + 1);
-    assert(sp.use_count() == 1);
-    assert(sp->val == val + 1);
+    EXPECT_EQ(sp.use_count(), 1);
+    EXPECT_EQ(sp->val, val + 1);
 
     {
         auto sp3 = sp;
-        assert(sp.use_count() == 2);
+        EXPECT_EQ(sp.use_count(), 2);
     }
-    assert(sp.use_count() == 1);
+    EXPECT_EQ(sp.use_count(), 1);
 
     sp.reset(new MyClass(val + 2));
-    assert(sp.use_count() == 1);
-    assert(sp->val == val + 2);
+    EXPECT_EQ(sp.use_count(), 1);
+    EXPECT_EQ(sp->val, val + 2);
 }
 
 std::atomic<int> dtorCount{0};
@@ -244,7 +244,7 @@ struct Tracker {
     ~Tracker() { dtorCount.fetch_add(1); }
 };
 
-void shared_ptr_testMultithreaded() {
+TEST(shared_ptr_test, multithreaded) {
     const int numThreads = 16;
     const int iters = 1000;
 
@@ -263,300 +263,263 @@ void shared_ptr_testMultithreaded() {
     for (auto &t : threads) t.join();
 
     // After all threads exit, sp is the only survivor
-    assert(sp);
-    assert(sp.use_count() == 1);
+    EXPECT_TRUE(sp);
+    EXPECT_EQ(sp.use_count(), 1);
 
     // Reset last owner, object should be destroyed exactly once
     sp.reset();
-    assert(!sp);
-    assert(sp.use_count() == 0);
-    assert(dtorCount.load() == 1);
+    EXPECT_FALSE(sp);
+    EXPECT_EQ(sp.use_count(), 0);
+    EXPECT_EQ(dtorCount.load(), 1);
 }
 
 ////////////////////////////////////////
 // unique_ptr tests
 ////////////////////////////////////////
-void unique_ptr_testGeneral() {
+
+TEST(unique_ptr_test, general) {
     int val = 1;
 
     // construct
     rack::unique_ptr<MyClass> p1(new MyClass(val));
-    assert(p1);
-    assert(p1->val == val);
-    assert((*p1).val == val);
+    EXPECT_TRUE(p1);
+    EXPECT_EQ(p1->val, val);
+    EXPECT_EQ((*p1).val, val);
 
     // move construct
     rack::unique_ptr<MyClass> p1new = std::move(p1);
-    assert(!p1);                  // old one released
-    assert(p1new);                // new one owns
-    assert(p1new->val == val);
+    EXPECT_FALSE(p1);                 // old one released
+    EXPECT_TRUE(p1new);               // new one owns
+    EXPECT_EQ(p1new->val, val);
 
     // move assign
     rack::unique_ptr<MyClass> p2;
     p2 = std::move(p1new);
-    assert(!p1new);
-    assert(p2);
-    assert(p2->val == val);
+    EXPECT_FALSE(p1new);
+    EXPECT_TRUE(p2);
+    EXPECT_EQ(p2->val, val);
 
     // release
     MyClass* raw = p2.release();
-    assert(!p2);              // p2 no longer owns anything
-    assert(raw->val == val);
+    EXPECT_FALSE(p2);              // p2 no longer owns anything
+    EXPECT_EQ(raw->val, val);
 
     // reset with new object
     p2.reset(new MyClass(val + 1));
-    assert(p2);
-    assert(p2->val == val + 1);
+    EXPECT_TRUE(p2);
+    EXPECT_EQ(p2->val, val + 1);
 
     // reset to null
     p2.reset();
-    assert(!p2);
+    EXPECT_FALSE(p2);
 
     // swap
     rack::unique_ptr<MyClass> p3(new MyClass(val + 2));
     rack::unique_ptr<MyClass> p4(new MyClass(val + 3));
     p3.swap(p4);
-    assert(p3->val == val + 3);
-    assert(p4->val == val + 2);
+    EXPECT_EQ(p3->val, val + 3);
+    EXPECT_EQ(p4->val, val + 2);
 
     // make_unique
     auto p5 = rack::make_unique<MyClass>(val + 4);
-    assert(p5);
-    assert(p5->val == val + 4);
+    EXPECT_TRUE(p5);
+    EXPECT_EQ(p5->val, val + 4);
 
     // boolean conversion
-    assert(p5);
+    EXPECT_TRUE(p5);
     p5.reset();
-    assert(!p5);
+    EXPECT_FALSE(p5);
 }
-
 
 ////////////////////////////////////////
 // deque tests
 ////////////////////////////////////////
 
-class DequeTests {
-public:
-    void deque_testPushFrontPushBack() {
-        int chunkSize = 4 * sizeof(int);
-        rack::deque<int> d1(chunkSize); // small chunkSize (for testing purposes)
-        std::vector<int> expected;
+TEST(deque_test, pushFrontPushBack) {
+    int chunkSize = 4 * sizeof(int);
+    rack::deque<int> d1(chunkSize); // small chunkSize (for testing purposes)
+    std::vector<int> expected;
 
-        // push back and push front
-        d1.push_back(2);
-        d1.push_back(3);
-        d1.push_front(1);
-        d1.push_front(0);
-        // expect - [0,1,2,3]
-        expected = {0,1,2,3};
-        for (size_t i = 0; i < expected.size(); i++) { assert(d1[i] == expected[i]); }
-        assert(d1.front() == 0);
-        assert(d1.back() == 3);
+    // push back and push front
+    d1.push_back(2);
+    d1.push_back(3);
+    d1.push_front(1);
+    d1.push_front(0);
+    // expect - [0,1,2,3]
+    expected = {0,1,2,3};
+    for (size_t i = 0; i < expected.size(); i++) { EXPECT_EQ(d1[i], expected[i]); }
+    EXPECT_EQ(d1.front(), 0);
+    EXPECT_EQ(d1.back(), 3);
 
-        // pop front and back
-        d1.pop_front();
-        d1.pop_back();
-        // expect - [X,1,2,X]
-        expected = {1,2};
-        for (size_t i = 0; i < expected.size(); i++) { assert(d1[i] == expected[i]); }
-        assert(d1.front() == 1);
-        assert(d1.back() == 2);
+    // pop front and back
+    d1.pop_front();
+    d1.pop_back();
+    // expect - [X,1,2,X]
+    expected = {1,2};
+    for (size_t i = 0; i < expected.size(); i++) { EXPECT_EQ(d1[i], expected[i]); }
+    EXPECT_EQ(d1.front(), 1);
+    EXPECT_EQ(d1.back(), 2);
 
-        // pop remaining
-        d1.pop_front();
-        d1.pop_front();
-        // expect - [X,X,X,X]
-        assert(d1.empty());
-        assert(d1.frontOff == 2 && d1.backOff == 2);
+    // pop remaining
+    d1.pop_front();
+    d1.pop_front();
+    EXPECT_TRUE(d1.empty());
+    // EXPECT_TRUE(d1.frontOff == 2 && d1.backOff == 2);
 
-        // push 6 elements
-        for (int i = 0; i < 6; i++) { d1.push_back(i); }
-        // expect - [X,X,0,1] [2,3,4,5]
-        expected = {0,1,2,3,4,5};
-        for (size_t i = 0; i < expected.size(); i++) { assert(d1[i] == expected[i]); }
-        assert(d1.back() == 5);
-        assert(d1.nChunks == 2);
+    // push 6 elements
+    for (int i = 0; i < 6; i++) { d1.push_back(i); }
+    expected = {0,1,2,3,4,5};
+    for (size_t i = 0; i < expected.size(); i++) { EXPECT_EQ(d1[i], expected[i]); }
+    EXPECT_EQ(d1.back(), 5);
+    // EXPECT_EQ(d1.nChunks, 2);
 
-        // push one more element (forces map growth)
-        d1.push_back(6);
-        // expect - [] [X,X,0,1] [2,3,4,5] [6,X,X,X]
-        expected = {0,1,2,3,4,5,6};
-        for (size_t i = 0; i < expected.size(); i++) { assert(d1[i] == expected[i]); }
-        assert(d1.back() == 6);
-        assert(d1[d1.size() - 1] == 6);
-        assert(d1.nChunks == 4);
-        assert(d1.chunkMap[0] == nullptr);
+    // push one more element (forces map growth)
+    d1.push_back(6);
+    expected = {0,1,2,3,4,5,6};
+    for (size_t i = 0; i < expected.size(); i++) { EXPECT_EQ(d1[i], expected[i]); }
+    EXPECT_EQ(d1.back(), 6);
+    EXPECT_EQ(d1[d1.size() - 1], 6);
+    // EXPECT_EQ(d1.nChunks, 4);
+    // EXPECT_EQ(d1.chunkMap[0], nullptr);
+}
+
+TEST(deque_test, insertEraseClearShrink) {
+    int chunkSize = 5 * sizeof(int);
+    rack::deque<int> d1(chunkSize); 
+    std::vector<int> expected;
+
+    //
+    // insert
+    //
+    for (int i = 0; i < 8; i++) { d1.push_back(i); }
+    expected = {0,1,2,3,4,5,6,7};
+    for (size_t i = 0; i < expected.size(); i++) { EXPECT_EQ(d1[i], expected[i]); }
+
+    d1.insert(d1.begin(), -1);
+    expected = {-1,0,1,2,3,4,5,6,7};
+    for (size_t i = 0; i < expected.size(); i++) { EXPECT_EQ(d1[i], expected[i]); }
+
+    d1.insert(d1.begin(), -2);
+    d1.insert(d1.begin(), -3);
+    expected = {-3,-2,-1,0,1,2,3,4,5,6,7};
+    for (size_t i = 0; i < expected.size(); i++) { EXPECT_EQ(d1[i], expected[i]); }
+
+    d1.insert(d1.begin() + 2, 100);
+    expected = {-3,-2,100,-1,0,1,2,3,4,5,6,7};
+    for (size_t i = 0; i < expected.size(); i++) { EXPECT_EQ(d1[i], expected[i]); }
+
+    d1.insert(d1.end() - 2, 100);
+    expected = {-3,-2,100,-1,0,1,2,3,4,5,100,6,7};
+    for (size_t i = 0; i < expected.size(); i++) { EXPECT_EQ(d1[i], expected[i]); }
+
+    //
+    // erase
+    //
+    d1.erase(d1.begin());
+    expected = {-2,100,-1,0,1,2,3,4,5,100,6,7};
+    for (size_t i = 0; i < expected.size(); i++) { EXPECT_EQ(d1[i], expected[i]); }
+
+    d1.erase(d1.end() - 1);
+    expected = {-2,100,-1,0,1,2,3,4,5,100,6};
+    for (size_t i = 0; i < expected.size(); i++) { EXPECT_EQ(d1[i], expected[i]); }
+
+    d1.erase(d1.begin() + 2);
+    expected = {-2,100,0,1,2,3,4,5,100,6};
+    for (size_t i = 0; i < expected.size(); i++) { EXPECT_EQ(d1[i], expected[i]); }
+
+    d1.erase(d1.end() - 3);
+    expected = {-2,100,0,1,2,3,4,100,6};
+    for (size_t i = 0; i < expected.size(); i++) { EXPECT_EQ(d1[i], expected[i]); }
+
+    //
+    // shrink to fit
+    //
+    uint32_t oldSize = d1.size();
+    d1.shrink_to_fit();
+    EXPECT_EQ(d1.size(), oldSize);
+    for (size_t i = 0; i < expected.size(); i++) { EXPECT_EQ(d1[i], expected[i]); }
+    // EXPECT_EQ(d1.nChunks, 2);
+
+    //
+    // clear
+    //
+    // uint32_t oldNChunks = d1.nChunks;
+    d1.clear();
+    EXPECT_EQ(d1.size(), 0);
+    // EXPECT_EQ(d1.nChunks, oldNChunks);
+    EXPECT_EQ(d1.begin(), d1.end());
+}
+
+template <typename T>
+void deque_testIterateHelper(int chunkSize, int n) {
+    rack::deque<T> d(chunkSize);
+    for (int i = 0; i < n; i++) { d.push_back(T(i)); }
+
+    EXPECT_NE(d.begin(), d.end());
+    for (int i = 0; i < n; i++) {
+        EXPECT_EQ(d.begin() + (n - i), d.end() - i);
     }
 
-    void deque_testInsertEraseClearShrink() {
-        int chunkSize = 5 * sizeof(int);
-        rack::deque<int> d1(chunkSize); 
-        std::vector<int> expected;
+    auto it = d.begin();
+    it += n;
+    EXPECT_EQ(it, d.end());
+    it -= n;
+    EXPECT_EQ(it, d.begin());
 
-        //
-        // insert
-        //
+    EXPECT_EQ(std::distance(d.begin(), d.end()), n);
 
-        for (int i = 0; i < 8; i++) { d1.push_back(i); }
-        // initial - [0,0,0,1,2], [3,4,5,6,7]
-        expected = {0,1,2,3,4,5,6,7};
-        for (size_t i = 0; i < expected.size(); i++) { assert(d1[i] == expected[i]); }
+    EXPECT_LT(d.begin(), d.end());
+    EXPECT_LE(d.begin(), d.end());
+    EXPECT_GT(d.end(), d.begin());
+    EXPECT_GE(d.end(), d.begin());
 
-        // insert at front
-        d1.insert(d1.begin(), -1);
-        // expect - [0,-1,0,1,2], [3,4,5,6,7] 
-        expected = {-1,0,1,2,3,4,5,6,7};
-        for (size_t i = 0; i < expected.size(); i++) { assert(d1[i] == expected[i]); }
-
-        // insert at front and back such that it grows
-        d1.insert(d1.begin(), -2);
-        d1.insert(d1.begin(), -3);
-        // expect - [0,0,0,0,-3], [-2,-1,0,1,2], [3,4,5,6,7], []
-        expected = {-3,-2,-1,0,1,2,3,4,5,6,7};
-        for (size_t i = 0; i < expected.size(); i++) { assert(d1[i] == expected[i]); }
-
-        // insert causing shift left
-        d1.insert(d1.begin() + 2, 100);
-        // expect - [0,0,0,-3,-2], [100,-1,0,1,2], [3,4,5,6,7], []
-        expected = {-3,-2,100,-1,0,1,2,3,4,5,6,7};
-        for (size_t i = 0; i < expected.size(); i++) { assert(d1[i] == expected[i]); }
-
-        // insert causing shift right
-        d1.insert(d1.end() - 2, 100);
-        // expect - [0,0,0,-3,-2], [100,-1,0,1,2], [3,4,5,100,6], [7,0,0,0,0]
-        expected = {-3,-2,100,-1,0,1,2,3,4,5,100,6,7};
-        for (size_t i = 0; i < expected.size(); i++) { assert(d1[i] == expected[i]); }
-
-        //
-        // erase
-        //
-
-        // erase from front
-        d1.erase(d1.begin());
-        // expect - [0,0,0,0,-2], [100,-1,0,1,2], [3,4,5,100,6], [7,0,0,0,0]
-        expected = {-2,100,-1,0,1,2,3,4,5,100,6,7};
-        for (size_t i = 0; i < expected.size(); i++) { assert(d1[i] == expected[i]); }
-
-        // erase from back
-        d1.erase(d1.end() - 1);
-        // expect - [0,0,0,0,-2], [100,-1,0,1,2], [3,4,5,100,6], [0,0,0,0,0]
-        expected = {-2,100,-1,0,1,2,3,4,5,100,6};
-        for (size_t i = 0; i < expected.size(); i++) { assert(d1[i] == expected[i]); }
-
-        // erase from middle (shift left case)
-        d1.erase(d1.begin() + 2);
-        // expect - [0,0,0,0,0], [-2,100,0,1,2], [3,4,5,100,6], [0,0,0,0,0]
-        expected = {-2,100,0,1,2,3,4,5,100,6};
-        for (size_t i = 0; i < expected.size(); i++) { assert(d1[i] == expected[i]); }
-
-        // erase from middle (shift right case)
-        d1.erase(d1.end() - 3);
-        // expect - [0,0,0,0,0], [-2,100,0,1,2], [3,4,100,6,0], [0,0,0,0,0]
-        expected = {-2,100,0,1,2,3,4,100,6};
-        for (size_t i = 0; i < expected.size(); i++) { assert(d1[i] == expected[i]); }
-
-        //
-        // shrink to fit
-        //
-        uint32_t oldSize = d1.size();
-        d1.shrink_to_fit();
-        // expect - [-2,100,0,1,2], [3,4,100,6,0]
-        assert(d1.size() == oldSize);
-        for (size_t i = 0; i < expected.size(); i++) { assert(d1[i] == expected[i]); }
-        assert(d1.nChunks == 2);
-
-        //
-        // clear
-        //
-        uint32_t oldNChunks = d1.nChunks;
-        d1.clear();
-        assert(d1.size() == 0);
-        assert(d1.nChunks == oldNChunks);
-        assert(d1.begin() == d1.end());
+    for (int i = 0; i < n; i++) {
+        EXPECT_EQ(*(d.begin() + i), T(i));
+    }
+    for (int i = 1; i <= n; i++) {
+        EXPECT_EQ(*(d.end() - i), T(n - i));
     }
 
-    template <typename T>
-    void deque_testIterateHelper(int chunkSize, int n) {
-        rack::deque<T> d(chunkSize);
-        for (int i = 0; i < n; i++) { d.push_back(T(i)); }
-
-        //
-        // arithmetic and comparison
-        //
-        assert(d.begin() != d.end());
-        for (int i = 0; i < n; i++) {
-            assert(d.begin() + (n - i) == d.end() - i);
-        }
-
-        auto it = d.begin();
-        it += n;
-        assert(it == d.end());
-        it -= n;
-        assert(it == d.begin());
-
-        assert(std::distance(d.begin(), d.end()) == n);
-
-        assert(d.begin() < d.end());
-        assert(d.begin() <= d.end());
-        assert(d.end() > d.begin());
-        assert(d.end() >= d.begin());
-
-        for (int i = 0; i < n; i++) {
-            assert(*(d.begin() + i) == T(i));
-        }
-        for (int i = 1; i <= n; i++) {
-            assert(*(d.end() - i) == T(n - i));
-        }
-
-        // access / dereference
-        it = d.begin();
-        assert(*(it + 1) == T(1));
-        for (int i = 0; i < n; i++) {
-            assert(*(it + i) == T(i));
-            assert(it[i] == T(i));
-        }
-
-        // looping (mutates elements)
-        for (auto &el : d) { el++; }
-        for (int i = 0; i < n; i++) { assert(d[i]-- == T(i + 1)); }
-
-        std::for_each(d.begin(), d.end(), [](T& el) { el++; });
-        for (int i = 0; i < n; i++) { assert(d[i]-- == T(i + 1)); }
-
-        // sort
-        std::random_device rd;
-        std::mt19937 gen(rd());
-        std::uniform_int_distribution<> dist(0, 100);
-        for (int i = 0; i < n; ++i) {
-            d[i] = T(dist(gen));
-        }
-        std::sort(d.begin(), d.end());
-        assert(std::is_sorted(d.begin(), d.end()));
+    it = d.begin();
+    EXPECT_EQ(*(it + 1), T(1));
+    for (int i = 0; i < n; i++) {
+        EXPECT_EQ(*(it + i), T(i));
+        EXPECT_EQ(it[i], T(i));
     }
 
-    void deque_testIterate() {
-        int chunkSize, n;
+    for (auto &el : d) { el++; }
+    for (int i = 0; i < n; i++) { EXPECT_EQ(d[i]--, T(i + 1)); }
 
-        // run iterator tests for different chunk sizes
-        for (int i = 4; i < 16; i++) {
-            chunkSize = i * sizeof(int);
-            n = chunkSize * 4;
+    std::for_each(d.begin(), d.end(), [](T& el) { el++; });
+    for (int i = 0; i < n; i++) { EXPECT_EQ(d[i]--, T(i + 1)); }
 
-            // primitive type 
-            deque_testIterateHelper<int>(chunkSize, n);
-
-            // custom object type
-            deque_testIterateHelper<MyClass>(chunkSize, n);
-        }
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_int_distribution<> dist(0, 100);
+    for (int i = 0; i < n; ++i) {
+        d[i] = T(dist(gen));
     }
+    std::sort(d.begin(), d.end());
+    EXPECT_TRUE(std::is_sorted(d.begin(), d.end()));
+}
+
+TEST(deque_test, iterate) {
+    int chunkSize, n;
+    for (int i = 4; i < 16; i++) {
+        chunkSize = i * sizeof(int);
+        n = chunkSize * 4;
+
+        deque_testIterateHelper<int>(chunkSize, n);
+        deque_testIterateHelper<MyClass>(chunkSize, n);
+    }
+}
 };
-
 
 ////////////////////////////////////////
 // unordered_map tests
 ////////////////////////////////////////
 
-void unordered_map_testGeneral() {
+TEST(unordered_map_test, general) {
     int N = 2 << 12;
     rack::unordered_map<std::string, int> m(N);
     int oneBeforeMaxLoadFactor = m.maxLoadFactor() * float(N);
@@ -599,37 +562,4 @@ void unordered_map_testGeneral() {
     // test iterator
     // note: separate test for this
 
-}
-
 }; // end 'rack'
-
-////////////////////////////////////////
-// run
-////////////////////////////////////////
-
-void runTests() {
-    // // vector tests
-    // rack::vector_testGeneral();
-    // rack::vector_testIterate();
-
-    // shared_ptr tests
-    // rack::shared_ptr_testGeneral();
-    rack::shared_ptr_testMultithreaded();
-
-    // unique_ptr tests
-    // rack::unique_ptr_testGeneral();
-
-    // // deque tests
-    // rack::DequeTests dt;
-    // dt.deque_testPushFrontPushBack();
-    // dt.deque_testInsertEraseClearShrink();
-    // dt.deque_testIterate();
-
-    // unordered_map tests
-    // rack::unordered_map_testGeneral();
-}
-
-int main() {
-    runTests();
-    return 0;
-}

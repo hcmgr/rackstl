@@ -1,3 +1,3 @@
 cd build
 make
-./test
+./test --gtest_color=yes
