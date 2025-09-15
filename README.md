@@ -8,13 +8,34 @@ A from-scratch implementation of C++'s core standard library (STL).
   - shared_ptr, unique_ptr, weak_ptr
 - Concurrency primitives
   - thread, lock_guard
+- Benchmarking
+  - Each implementation benchmarked against STL corrolary
+- Testing
+  - GTest used, each implementation given own suite of comprehensive unit tests
 
-### Build
+### Usage
+Implementations are header-only and completely self-contained. Simply include, and you're off and running.
+
+### Run benchmarks
 ```bash
+./scripts/bench.sh
+
+## OR - manual build
+mkdir build
+cd build
+cmake ..
+make
+./bench
+```
+
+### Run tests
+```bash
+./scripts/test.sh
+
+## OR - manual build
 mkdir build
 cd build
 cmake ..
 make
 ./test
-
 ```
