@@ -6,23 +6,29 @@
 
 namespace rack {
 
+//
+// Deque uses an array of fixed-size arrays (chunks) as its underlying data structure.
+// We call this the 'chunk map'.
+//
+// Together, the chunks are treated as one large buffer of contiguous elements. We start
+// with one chunk, and as deque grows, chunks are lazily allocated when needed. The front
+// grows 'left', meaning: when the front runs out of capacity, we allocate a new chunk at the
+// next lowest index in the chunk map. Similarly, the back grows 'right', with new chunks allocated
+// at the next highest index in the chunk map.
+// 
+// This lazy chunk allocation makes resizing faster than vector's. For example, increasing deque's
+// chunk map capacity is done by:
+//      - allocating a new chunk map AND;
+//      - copying the chunk pointers into the new map
+// Thus, resize'ing is O(nChunks), rather than vector's O(n).
+// 
+// Of course, the price you pay is slower random access, as the chunks are not contiguous
+// in memory (i.e. many pointer indirections needed, rather than just a quick scan).
+//
 template <class T>
 class deque {
 private:
-    //
-    // The underlying data structure is an array of fixed-size 'chunks'.
-    // Together, the chunks are treated as one large buffer. We keep pointers
-    // to the front and back for O(1) access. As deque grows and shrinks, chunks
-    // are added and removed as needed. So, compared to vector, insertion/deletion 
-    // is still O(1) on average, but resizing is faster. For example, increasing 
-    // deque's capacity is done by:
-    //      - allocating a new chunk AND;
-    //      - copying the chunk pointers into a new container.
-    // Thus, resize'ing is O(nChunks), rather than vector's O(n).
-    //
-    // Of course, the price you pay is slower randmom access, as the 
-    // chunks are not contiguous in memory.
-    //
+
     T** chunkMap;
 
     uint32_t nChunks;
