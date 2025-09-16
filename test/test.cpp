@@ -340,21 +340,35 @@ TEST(weak_ptr_test, general) {
     auto sp1 = rack::make_shared<MyClass>(1);
     rack::weak_ptr<MyClass> wp1 = sp1;
 
+    // basic
     ASSERT_EQ(1, wp1.use_count());
     ASSERT_FALSE(wp1.expired());
     wp1.reset();
     ASSERT_FALSE(wp1.expired());
     sp1.reset();
     ASSERT_TRUE(wp1.expired());
-
-    sp1 = rack::make_shared<MyClass>(2);
+    sp1 = rack::make_shared<MyClass>(1);
     wp1 = sp1;
     ASSERT_EQ(1, wp1.use_count());
+
+    // lock
     {
-        auto sp2 = wp1.lock(); // create new sp using lock()
+        auto sp2 = wp1.lock();
         ASSERT_EQ(2, wp1.use_count());
     }
     ASSERT_EQ(1, wp1.use_count());
+
+    // swap 
+    auto sp3 = rack::make_shared<MyClass>(3);
+    rack::weak_ptr<MyClass> wp3 = sp3;
+    wp1.swap(wp3);
+    ASSERT_EQ(1, wp1.use_count());
+    ASSERT_EQ(1, wp3.use_count());
+    auto sp1_locked = wp1.lock();
+    auto sp3_locked = wp3.lock();
+    ASSERT_EQ(3, sp1_locked->val);
+    ASSERT_EQ(1, sp3_locked->val);
+
 }
 
 ////////////////////////////////////////
