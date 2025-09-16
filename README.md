@@ -16,26 +16,13 @@ A from-scratch implementation of C++'s core standard library (STL).
 ### Usage
 Implementations are header-only and completely self-contained. Simply include, and you're off and running.
 
-### Run benchmarks
+### Run benchmarks / tests
 ```bash
-./scripts/bench.sh
-
-## OR - manual build
 mkdir build
 cd build
 cmake ..
 make
-./bench
-```
 
-### Run tests
-```bash
-./scripts/test.sh
-
-## OR - manual build
-mkdir build
-cd build
-cmake ..
-make
-./test
+./bench     ## benchmarks
+./test      ## tests
 ```

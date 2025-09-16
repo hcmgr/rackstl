@@ -1,11 +1,10 @@
+#include <algorithm>
+#include <random>
+
 #include "vector.hpp"
 #include "shared_ptr.hpp"
 #include "unique_ptr.hpp"
 #include "deque.hpp"
-
-
-#include <algorithm>
-#include <random>
 
 struct MyClass {
     int val;
@@ -33,7 +32,7 @@ void vector_benchPushBack() {
 
         auto end = std::chrono::high_resolution_clock::now();
         std::chrono::duration<double> elapsed = end - start;
-        std::cout << "[std::vector] push_back " << N << " ints: "
+        std::cout << "std::vector push_back " << N << " ints: "
                   << elapsed.count() << " seconds\n";
     }
 
@@ -51,7 +50,7 @@ void vector_benchPushBack() {
 
         auto end = std::chrono::high_resolution_clock::now();
         std::chrono::duration<double> elapsed = end - start;
-        std::cout << "[rack::vector] push_back " << N << " ints: "
+        std::cout << "rack::vector push_back " << N << " ints: "
                   << elapsed.count() << " seconds\n";
     }
 }
@@ -130,6 +129,10 @@ void vector_benchmarkIterate() {
 //     std::cout << "rack::vector sort time: " << rackDuration << " ms\n";
 // }
 
+////////////////////////////////////////
+// shared_ptr benchmarks
+////////////////////////////////////////
+
 void shared_ptr_bench() {
     const int N = 1'000'000;
 
@@ -175,6 +178,10 @@ void shared_ptr_bench() {
                   << " objects: " << elapsed.count() << " seconds\n";
     }
 }
+
+////////////////////////////////////////
+// unique_ptr benchmarks
+////////////////////////////////////////
 
 void unique_ptr_bench() {
     const int N = 1'000'000;
@@ -336,7 +343,7 @@ void deque_benchSort() {
         auto end = std::chrono::high_resolution_clock::now();
 
         auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
-        std::cout << "[std::deque] sort " << N << " ints: "
+        std::cout << "std::deque sort " << N << " ints: "
                   << elapsed << " ms\n";
     }
 
@@ -354,7 +361,7 @@ void deque_benchSort() {
         auto end = std::chrono::high_resolution_clock::now();
 
         auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
-        std::cout << "[rack::deque] sort " << N << " ints: "
+        std::cout << "rack::deque sort " << N << " ints: "
                   << elapsed << " ms\n";
     }
 }
@@ -398,17 +405,37 @@ void deque_benchRandomAccess() {
     std::cout << "rack::deque random access time: " << rackDuration << " us\n";
 }
 
+////////////////////////////////////////
+// run
+////////////////////////////////////////
+
+std::string divider(std::string benchName) {
+    std::ostringstream oss;
+    oss << "\n"
+        << "#########################" << "\n"  
+        << "## " << benchName << "\n"
+        << "#########################" << "\n";
+    return oss.str();
+}
+
 int main() {
-    // vector_benchPushBack();
-    // vector_benchmarkIterate();
+    
+    std::cout << divider("vector");
+    vector_benchPushBack();
+    vector_benchmarkIterate();
     // vector_benchSort();
+    
+    std::cout << divider("shared_ptr");
+    shared_ptr_bench();
 
-    // shared_ptr_bench();
-    // unique_ptr_bench();
+    std::cout << divider("unique_ptr");
+    unique_ptr_bench();
 
-    // deque_benchPush();
-    // deque_benchIterate();
+    std::cout << divider("deque");
+    deque_benchPush();
+    deque_benchIterate();
     // deque_benchSort();
-    // deque_benchRandomAccess();
+    deque_benchRandomAccess();
+
     return 0;
 }
