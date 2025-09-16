@@ -368,7 +368,6 @@ TEST(weak_ptr_test, general) {
     auto sp3_locked = wp3.lock();
     ASSERT_EQ(3, sp1_locked->val);
     ASSERT_EQ(1, sp3_locked->val);
-
 }
 
 ////////////////////////////////////////

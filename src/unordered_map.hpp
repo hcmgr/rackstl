@@ -2,15 +2,30 @@
 #include <iostream>
 #include <memory>
 #include <algorithm>
+
 #include "utils.hpp"
 
 #define DEFAULT_INIT_CAPACITY (1 << 12)     
 #define MAX_CAPACITY (1 << 30)
 
 //
-// Robin-hood hashing. Power of two table size, to ensure fast modulo. Grow table via doubling.
+// Unordered_map uses robin-hood hashing.
 //
-
+// Robin-hood hashing is a hash table strategy that improves on linear probing. 
+// It does so by minimising each key's 'probe distance', i.e. the distance a key
+// is from its 'home' bucket (hash(key) % N).
+//
+// On a hash collision, linear probing is performed as normal to find an available 
+// bucket. However, if, on your probing journey, you find a key with a lower probe
+// distance: swap, and continue your search with the swapped key (i.e. steal from 
+// rich, give to the poor, hence: robin-hood).
+//
+// We also maintain a power-of-2 table size. This is so we can use the 'fast modulo'
+// operation:
+//      i % N <==> i & (N - 1), where N == 2^k (for some k)
+// which only works if N is a power-of-2. Naturally, this means we grow the table
+// via a doubling strategy.
+//
 namespace rack {
 
 template <class K, class V, class Alloc = std::allocator<std::pair<const K, V>>>
