@@ -14,6 +14,7 @@
 #include "vector.hpp"
 #include "shared_ptr.hpp"
 #include "unique_ptr.hpp"
+#include "weak_ptr.hpp"
 #include "deque.hpp"
 #include "unordered_map.hpp"
 
@@ -329,6 +330,31 @@ TEST(unique_ptr_test, general) {
     EXPECT_TRUE(p5);
     p5.reset();
     EXPECT_FALSE(p5);
+}
+
+////////////////////////////////////////
+// weak_ptr tests
+////////////////////////////////////////
+
+TEST(weak_ptr_test, general) {
+    auto sp1 = rack::make_shared<MyClass>(1);
+    rack::weak_ptr<MyClass> wp1 = sp1;
+
+    ASSERT_EQ(1, wp1.use_count());
+    ASSERT_FALSE(wp1.expired());
+    wp1.reset();
+    ASSERT_FALSE(wp1.expired());
+    sp1.reset();
+    ASSERT_TRUE(wp1.expired());
+
+    sp1 = rack::make_shared<MyClass>(2);
+    wp1 = sp1;
+    ASSERT_EQ(1, wp1.use_count());
+    {
+        auto sp2 = wp1.lock(); // create new sp using lock()
+        ASSERT_EQ(2, wp1.use_count());
+    }
+    ASSERT_EQ(1, wp1.use_count());
 }
 
 ////////////////////////////////////////

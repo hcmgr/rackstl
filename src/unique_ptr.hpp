@@ -1,3 +1,4 @@
+#pragma once
 namespace rack {
 
 template <class T>

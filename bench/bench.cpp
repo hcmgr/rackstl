@@ -418,8 +418,7 @@ std::string divider(std::string benchName) {
     return oss.str();
 }
 
-int main() {
-    
+void runBenchmarks() {
     std::cout << divider("vector");
     vector_benchPushBack();
     vector_benchmarkIterate();
@@ -436,6 +435,9 @@ int main() {
     deque_benchIterate();
     // deque_benchSort();
     deque_benchRandomAccess();
+}
 
+int main() {
+    runBenchmarks();
     return 0;
 }

@@ -1,30 +1,36 @@
+#pragma once
 #include <atomic>
 
 namespace rack {
 
+// forward declare weak_ptr
+template <class T>
+class weak_ptr;
+
+//
+// Control block is shared by each shared_ptr referencing `ptr`.
+// Note that atomics are used for strong and weak count to ensure 
+// thread safety.
+//
+struct SharedPtrControlBlock {
+
+    std::atomic<uint32_t> strongCnt;
+    std::atomic<uint32_t> weakCnt;
+
+    SharedPtrControlBlock()
+        : strongCnt(0), weakCnt(0) {}
+};
+
 template <class T>
 class shared_ptr {
 private:
-
-    //
-    // Control block is shared by each shared_ptr referencing `ptr`.
-    // Note that atomics are used for strong and weak count to ensure 
-    // thread safety.
-    //
-    struct SharedPtrControlBlock {
-
-        std::atomic<uint32_t> strongCnt;
-        std::atomic<uint32_t> weakCnt;
-
-        SharedPtrControlBlock()
-            : strongCnt(0), weakCnt(0) {}
-    };
-
     T* ptr;
     SharedPtrControlBlock* controlBlock;
 
-public:
+    template <class U>
+    friend class weak_ptr; // allow weak_ptr to access shared_ptr private members
 
+public:
     //////////////////////////////////////////////////////
     // Constructors
     //////////////////////////////////////////////////////
@@ -57,6 +63,15 @@ public:
         controlBlock = other.controlBlock;
         other.ptr = nullptr;
         other.controlBlock = nullptr;
+    }
+
+    // Construct from weak pointer
+    shared_ptr(const weak_ptr<T>& other) 
+        : ptr(other.ptr), controlBlock(other.controlBlock)
+    {
+        if (controlBlock) {
+            controlBlock->strongCnt.fetch_add(1, std::memory_order_relaxed);
+        }
     }
 
     // Copy assignment
@@ -136,7 +151,6 @@ public:
     }
 
 private:
-
     //
     // Releases ownership of the managed object by:
     //      - decrementing strong refnct AND;
@@ -158,8 +172,8 @@ private:
             // also no non-owning references left - free control block
             if (controlBlock->weakCnt.load() == 0) {
                 delete controlBlock;
-                controlBlock = nullptr;
             }
+            controlBlock = nullptr;
         }
     }
 };
@@ -168,5 +182,4 @@ template <class T, typename... Args>
 shared_ptr<T> make_shared(Args&&... args) {
     return shared_ptr<T>(new T(std::forward<Args>(args)...));
 }
-
 }; // end of 'rack'
