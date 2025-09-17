@@ -42,6 +42,8 @@ private:
     std::allocator<T*> chunkAllocator;
     std::allocator<T> elementAllocator;
 
+    class iterator; // forward-declare iterator
+
 public:
 
     //////////////////////////////////////////////////////
@@ -181,8 +183,6 @@ public:
         // update the back pointer
         dec(backChunk, backOff);
     }
-
-    class iterator;
 
     // Insert copy of `val` at position before `loc`.
     void insert(iterator loc, const T& val) {

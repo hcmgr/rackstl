@@ -15,6 +15,7 @@ private:
     uint32_t mSize;
 
     std::allocator<T> alloc;
+    class iterator; // forward-declare iterator
 
 public:
     //////////////////////////////////////////////////////
@@ -22,41 +23,45 @@ public:
     //////////////////////////////////////////////////////
 
     vector() 
-        : buffPtr(nullptr), mCapacity(0), mSize(0) {
-        // do nothing - allocation of `mBuff` occurs on first element added
+        : buffPtr(nullptr), mCapacity(0), mSize(0) 
+    {
+        // do nothing - allocation of `buffPtr` occurs on first element added
     }
 
     ~vector() {
-
+        destroy();
     }
 
     // Constructs container of `n` copies of `val`.
     vector(uint32_t n, T val) 
-        : mCapacity(n), mSize(n) {
+        : mCapacity(n), mSize(n) 
+    {
         buffPtr = alloc.allocate(mCapacity);
         for (int i = 0; i < n; i++) {
             buffPtr[i] = val;
         }
     }
 
-    // Copy constructor (i.e. MyClass b = a, constructing b by copying a)
-    vector(const vector& other) {
-
+    // Copy constructor
+    vector(const vector& other)  {
+        copyOther(other);
     }
 
-    // Move constructor (i.e. MyClass b = std::move(a), constructing b by moving a)
+    // Move constructor 
     vector(vector&& other) {
-
+        moveOther();
     }
 
-    // Copy assignment
+    // Copy assign
     vector& operator=(const vector& other) {
-
+        destroy();
+        copyOther(other);
     }
 
-    // Move assignment 
+    // Move assign
     vector& operator=(vector&& other) noexcept {
-
+        destroy();
+        moveOther(other);
     }
 
     //////////////////////////////////////////////////////
@@ -115,9 +120,13 @@ public:
     // Modifiers
     //////////////////////////////////////////////////////
 
+    //
+    // Constructs a T from `args` in-place and adds it to the back
+    // of the container. 
+    //
     template <typename... Args>
     void emplace_back(Args&&... args) {
-        // first element added - allocate mBuff of capacity 1
+        // first element added - allocate buffer of capacity 1
         if (mCapacity == 0) {
             assert(mSize == 0 && buffPtr == nullptr);
             mCapacity = 1;
@@ -146,9 +155,7 @@ public:
         // add val
         utils::allocConstruct(alloc, newBuffPtr + mSize, std::forward<Args>(args)...);
 
-        //
-        // Teardown old buffer.
-        //
+        // teardown old buffer
         for (int i = 0; i < mSize; ++i) {
             utils::allocDestroy(alloc, buffPtr + i);
         }
@@ -161,23 +168,43 @@ public:
     }
 
     //
-    // Adds copy of `val` to the end of the container.
-    // If capacity is reached, the container grows via a doubling strategy.
-    // 
-    // Note: uses emplace_back() under the hood
+    // Adds a copy of `val` to the back of the container.
     //
     void push_back(const T& val) {
         emplace_back(val);
     }
 
-    // Inserts copy of `val` before `pos`
+    // Inserts a copy of `val` before `pos`
     void insert(T val, uint32_t pos) {
 
     }
 
-    // Erases element at `pos` from container
-    void erase(uint32_t pos) {
+    void shiftLeft(uint32_t startIdx, uint32 endIdx) {
+        assert(startIdx <= endIdx);
 
+        uint32_t currIdx = startIdx - 1;
+        while (currIdx != endIdx) {
+            buffPtr[currIdx] = std::move(buffPtr[currIdx + 1]);
+            currIdx++;
+        }
+    }
+
+    // Erases element at `pos` from container
+    iterator erase(iterator pos) {
+        // invalid range
+        if (pos < begin() || pos >= end()) {
+            return end();
+        }
+
+        // de-allocate
+        T* posPtr = pos.ptr;
+        T* endPtr = buffPtr + mSize - 1;
+        utils::allocDestroy(alloc, posPtr);
+
+        // shift all right-elements one position to left
+        if (endPtr - posPtr > 0) {
+            shiftLeft(posPtr + 1, endPtr);
+        }
     }
 
     // Clears the contents of the container (capacity unchanged)
@@ -273,6 +300,42 @@ public:
 
     iterator end() {
         return iterator(buffPtr + mSize);
+    }
+
+    //////////////////////////////////////////////////////
+    // Helpers
+    //////////////////////////////////////////////////////
+
+private:
+    void copyOther(const vector& other) {
+        mCapacity = other.mCapacity;
+        mSize = other.mSize;
+        buffPtr = alloc.allocate(mCapacity);
+        for (int i = 0; i < mSize; i++) {
+            utils::allocConstruct(alloc, buffPtr + i, other.buffPtr + i);
+        }
+    }
+
+    void moveOther(vector&& other) {
+        mCapacity = other.mCapacity;
+        mSize = other.mSize;
+        buffPtr = other.buffPtr;
+
+        other.buffPtr = nullptr;
+        other.mCapacity = 0;
+        other.mSize = 0;
+    }
+
+    void destroy() {
+        if (buffPtr) {
+            for (size_t i = 0; i < mSize; ++i) {
+                utils::allocDestroy(alloc, buffPtr + i);
+            }
+            alloc.deallocate(buffPtr, mCapacity);
+        }
+        buffPtr = nullptr;
+        mSize = 0;
+        mCapacity = 0;
     }
 };
 
