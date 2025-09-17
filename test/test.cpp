@@ -112,33 +112,20 @@ TEST(vector_test, general) {
         EXPECT_EQ(vec1[i], i);
     }
 
-    // //
-    // // test vector of non-standard type (i.e. MyClass)
-    // //
+    //
+    // test vector of non-standard type (i.e. MyClass)
+    //
 
-    // rack::vector<MyClass> vec2;
-
-    // // use copy and move constructor calls to validate push_back behaviour
-    // int& copyCtorCount = MyClass::copyCtorCalls = 0;
-    // int& moveCtorCount = MyClass::moveCtorCalls = 0;
-    // int& copyAssCount  = MyClass::copyCtorCalls = 0;
-    // int& moveAssCount  = MyClass::moveCtorCalls = 0;
-    
-    // n = 100;
-    // for (int i = 0; i < n; i++) {
-    //     int expCopyCount = copyCtorCount + copyAssCount;
-    //     expCopyCount += 2;
-
-    //     if (vec2.capacity() == vec2.size()) { // resize required - n copies into new buffer
-    //         expCopyCount += vec2.size();
-    //     }
-
-    //     MyClass m(i);
-    //     vec2.push_back(std::move(m));
-
-    //     std::cout << expCopyCount << " " << copyCtorCount + copyAssCount << "\n";
-    //     EXPECT_EQ(expCopyCount, copyCtorCount + copyAssCount);
-    // }
+    rack::vector<MyClass> vec2;
+    for (int i = 0; i < n; i++) {
+        vec2.emplace_back(i);
+    }
+    expectedCapacity = 1 << ((int)std::log2(n) + 1);
+    EXPECT_EQ(vec2.capacity(), expectedCapacity);
+    EXPECT_EQ(vec2.size(), n);
+    for (int i = 0; i < n; i++) {
+        EXPECT_EQ(vec2[i].val, i);
+    }
 }
 
 TEST(vector_test, iterate) {

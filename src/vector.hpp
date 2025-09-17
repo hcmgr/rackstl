@@ -3,41 +3,39 @@
 #include <cassert>
 #include <iostream>
 
+#include "utils.hpp"
+
 namespace rack {
 
 template <class T>
 class vector {
 private:
-    T* _buff;
-    uint32_t _capacity;
-    uint32_t _size;
+    T* buffPtr;
+    uint32_t mCapacity;
+    uint32_t mSize;
+
+    std::allocator<T> alloc;
 
 public:
-
     //////////////////////////////////////////////////////
     // Construtors
     //////////////////////////////////////////////////////
 
     vector() 
-        : _buff(nullptr), _capacity(0), _size(0) {
-        // do nothing - allocation of `_buff` occurs on first element added
+        : buffPtr(nullptr), mCapacity(0), mSize(0) {
+        // do nothing - allocation of `mBuff` occurs on first element added
     }
 
     ~vector() {
 
     }
 
-    //
     // Constructs container of `n` copies of `val`.
-    //
-    // NOTE: For now, container initialised with capacity `n` (i.e. immediately full capacity).
-    //       Room for optimisation. Potentially initialise it as 2n?
-    //
     vector(uint32_t n, T val) 
-        : _capacity(n), _size(n) {
-        _buff = static_cast<T*>(::operator new(sizeof(T) * _capacity));
+        : mCapacity(n), mSize(n) {
+        buffPtr = alloc.allocate(mCapacity);
         for (int i = 0; i < n; i++) {
-            _buff[i] = val;
+            buffPtr[i] = val;
         }
     }
 
@@ -67,50 +65,69 @@ public:
 
     // [] operator override
     T& operator[](uint32_t i) {
-        if (i < 0 || i >= _size) {
+        if (i < 0 || i >= mSize) {
             throw std::runtime_error(
                 "Index out of bounds error: " +
-                std::string("index=") + std::to_string(i) + ", size=" + std::to_string(_size)
+                std::string("index=") + std::to_string(i) + ", size=" + std::to_string(mSize)
             );
         }
-        return _buff[i];
+        return buffPtr[i];
     }
 
     // First element of container
     T& front() { 
-        return _buff[0]; 
+        return buffPtr[0]; 
     }
 
     // Last element of container
     T& back() {
-        return _buff[_size - 1]; 
+        return buffPtr[mSize - 1]; 
     }
 
     // Accesses pointer to underlying container
     T* data() { 
-        return _buff; 
+        return buffPtr; 
     }
+
+    //////////////////////////////////////////////////////
+    // Capacity
+    //////////////////////////////////////////////////////
+
+    bool empty() {
+        return mSize == 0;
+    }
+
+    uint32_t size() {
+        return mSize;
+    }
+
+    uint32_t capacity() {
+        return mCapacity;
+    }
+
+    // Reserve capacity ahead of time
+    void reserve(uint32_t capacity);
+
+    // Frees un-used capacity of the container
+    void shrink_to_fit();
 
     //////////////////////////////////////////////////////
     // Modifiers
     //////////////////////////////////////////////////////
 
-    //
-    // Adds copy of `val` to the end of the container.
-    // If capacity is reached, the container grows via a doubling strategy.
-    //
-    void push_back(const T& val) {
-        // first element added - allocate _buff of capacity 1
-        if (_capacity == 0) {
-            assert(_size == 0 && _buff == nullptr);
-            _capacity++;
-            _buff = static_cast<T*>(::operator new(sizeof(T) * _capacity));
+    template <typename... Args>
+    void emplace_back(Args&&... args) {
+        // first element added - allocate mBuff of capacity 1
+        if (mCapacity == 0) {
+            assert(mSize == 0 && buffPtr == nullptr);
+            mCapacity = 1;
+            buffPtr = alloc.allocate(mCapacity);
         }
 
         // enough space for val
-        if (_size < _capacity) {
-            new (&_buff[_size]) T(val); // note use of 'placement new' operator
-            _size++;
+        if (mSize < mCapacity) {
+            utils::allocConstruct(alloc, buffPtr + mSize, std::forward<Args>(args)...);
+            mSize++;
             return;
         }
 
@@ -119,37 +136,38 @@ public:
         //
 
         // create new buffer of size 2n
-        T* newBuffPtr = static_cast<T*>(::operator new(sizeof(T) * 2 * _capacity));
+        T* newBuffPtr = alloc.allocate(2 * mCapacity);
 
         // copy n elements from old buffer into new buffer
-        for (int i = 0; i < _size; i++) {
-            new (&newBuffPtr[i]) T(_buff[i]);
+        for (int i = 0; i < mSize; i++) {
+            utils::allocConstruct(alloc, newBuffPtr + i, buffPtr[i]);
         }
         
         // add val
-        new (&newBuffPtr[_size]) T(val);
-        _size++;
+        utils::allocConstruct(alloc, newBuffPtr + mSize, std::forward<Args>(args)...);
 
         //
         // Teardown old buffer.
         //
-        // Note that `::operator delete(_buff)` only de-allocates the memory buffer.
-        // We must also also destruct each object of the old array.
-        //
-        for (int i = 0; i < _size; ++i) {
-            _buff[i].~T();
+        for (int i = 0; i < mSize; ++i) {
+            utils::allocDestroy(alloc, buffPtr + i);
         }
-        ::operator delete(_buff);
+        alloc.deallocate(buffPtr, mCapacity);
 
-        // point _buff to new buffer
-        _buff = newBuffPtr;
-        _capacity = 2 * _capacity;
+        // update new buffer
+        buffPtr = newBuffPtr;
+        mCapacity = 2 * mCapacity;
+        mSize++;
     }
 
-    // Constructs element in place using `args` and performs 'push_back' operation
-    template <typename... Args>
-    void emplace_back(Args&&... args) {
-
+    //
+    // Adds copy of `val` to the end of the container.
+    // If capacity is reached, the container grows via a doubling strategy.
+    // 
+    // Note: uses emplace_back() under the hood
+    //
+    void push_back(const T& val) {
+        emplace_back(val);
     }
 
     // Inserts copy of `val` before `pos`
@@ -162,9 +180,12 @@ public:
 
     }
 
-    // Clears the contents of the container
+    // Clears the contents of the container (capacity unchanged)
     void clear() {
-
+        for (int i = 0; i < mSize; i++) {
+            utils::allocDestroy(alloc, buffPtr);
+        }
+        mSize = 0;
     }
 
     //
@@ -179,25 +200,6 @@ public:
     }
 
     //////////////////////////////////////////////////////
-    // Capacity
-    //////////////////////////////////////////////////////
-
-    bool empty() {
-        return _size == 0;
-    }
-
-    uint32_t size() {
-        return _size;
-    }
-
-    uint32_t capacity() {
-        return _capacity;
-    }
-
-    // Reserve capacity ahead of time.
-    void reserve(uint32_t capacity);
-
-    //////////////////////////////////////////////////////
     // Display
     //////////////////////////////////////////////////////
 
@@ -205,10 +207,10 @@ public:
     {
         std::ostringstream oss;
         oss << "[";
-        for (uint32_t i = 0; i < _size; ++i) 
+        for (uint32_t i = 0; i < mSize; ++i) 
         {
-            oss << _buff[i];
-            if (i != _size - 1) {
+            oss << buffPtr[i];
+            if (i != mSize - 1) {
                 oss << ",";
             }
         }
@@ -266,11 +268,11 @@ public:
 
 
     iterator begin() {
-        return iterator(_buff);
+        return iterator(buffPtr);
     }
 
     iterator end() {
-        return iterator(_buff + _size);
+        return iterator(buffPtr + mSize);
     }
 };
 
