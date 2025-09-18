@@ -181,6 +181,30 @@ TEST(vector_test, iterate) {
     EXPECT_TRUE(std::is_sorted(vec3.begin(), vec3.end()));
 }
 
+TEST(vector_test, erase) {
+    rack::vector<int> vec1;
+    int N = 20;
+    for (int i = 0; i < N; i++) {
+        vec1.push_back(i + 10);
+    }
+    std::cout << vec1.toString();
+    vec1.erase(vec1.begin());
+    std::cout << vec1.toString();
+
+    rack::vector<int> vec2;
+    vec2.push_back(1);
+    std::cout << vec2.toString();
+    vec2.erase(vec2.begin());
+    std::cout << vec2.toString();
+
+    vec2.erase(vec2.begin());
+    std::cout << vec2.toString();
+}
+
+TEST(vector_test, insert) {
+
+}
+
 ////////////////////////////////////////
 // shared_ptr tests
 ////////////////////////////////////////

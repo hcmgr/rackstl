@@ -15,9 +15,10 @@ private:
     uint32_t mSize;
 
     std::allocator<T> alloc;
+    
+public:
     class iterator; // forward-declare iterator
 
-public:
     //////////////////////////////////////////////////////
     // Construtors
     //////////////////////////////////////////////////////
@@ -179,7 +180,10 @@ public:
 
     }
 
-    void shiftLeft(uint32_t startIdx, uint32 endIdx) {
+    // 
+    // Shift all elements in range [startIdx, endIdx] (inclusive) one position to the left.
+    //
+    void shiftLeft(uint32_t startIdx, uint32_t endIdx) {
         assert(startIdx <= endIdx);
 
         uint32_t currIdx = startIdx - 1;
@@ -189,6 +193,21 @@ public:
         }
     }
 
+    // 
+    // Shift all elements in range [startIdx, endIdx] (inclusive) one position to the right.
+    // We assume there is available capacity.
+    //
+    void shiftRight(uint32_t startIdx, uint32_t endIdx) {
+        assert(startIdx <= endIdx);
+
+        uint32_t currIdx = startIdx - 1;
+        while (currIdx != endIdx) {
+            buffPtr[currIdx] = std::move(buffPtr[currIdx + 1]);
+            currIdx++;
+        }
+
+    }
+
     // Erases element at `pos` from container
     iterator erase(iterator pos) {
         // invalid range
@@ -196,15 +215,24 @@ public:
             return end();
         }
 
-        // de-allocate
-        T* posPtr = pos.ptr;
-        T* endPtr = buffPtr + mSize - 1;
-        utils::allocDestroy(alloc, posPtr);
+        // erase element
+        uint32_t posOff = pos.ptr - buffPtr;
+        utils::allocDestroy(alloc, buffPtr + posOff);
+        utils::allocConstruct(alloc, buffPtr + posOff, T());
 
         // shift all right-elements one position to left
-        if (endPtr - posPtr > 0) {
-            shiftLeft(posPtr + 1, endPtr);
+        if (mSize > 1) {
+            uint32_t startOff = posOff + 1;
+            uint32_t endOff = mSize - 1;
+            if (endOff - startOff >= 0) {
+                shiftLeft(startOff, endOff);
+            }
+            utils::allocDestroy(alloc, buffPtr + endOff);
+            utils::allocConstruct(alloc, buffPtr + endOff, T());
         }
+
+        mSize--;
+        return iterator(buffPtr + posOff);
     }
 
     // Clears the contents of the container (capacity unchanged)
@@ -230,14 +258,19 @@ public:
     // Display
     //////////////////////////////////////////////////////
 
-    std::string to_string() 
+    std::string toString() 
     {
         std::ostringstream oss;
         oss << "[";
-        for (uint32_t i = 0; i < mSize; ++i) 
+        for (uint32_t i = 0; i < mCapacity; ++i) 
         {
-            oss << buffPtr[i];
-            if (i != mSize - 1) {
+            if (buffPtr[i]) {
+                oss << buffPtr[i];
+            } else {
+                oss << "_";
+            }
+
+            if (i != mCapacity - 1) {
                 oss << ",";
             }
         }

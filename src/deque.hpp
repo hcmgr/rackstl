@@ -42,9 +42,8 @@ private:
     std::allocator<T*> chunkAllocator;
     std::allocator<T> elementAllocator;
 
-    class iterator; // forward-declare iterator
-
 public:
+    class iterator; // forward-declare iterator
 
     //////////////////////////////////////////////////////
     // Construtors
