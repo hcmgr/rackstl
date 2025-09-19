@@ -111,11 +111,27 @@ public:
         return mCapacity;
     }
 
-    // Reserve capacity ahead of time
-    void reserve(uint32_t capacity);
+    //
+    // Increase capacity of vector to `newCapacity`.
+    //
+    void reserve(uint32_t newCapacity) {
+        if (newCapacity <= mCapacity) {
+            return;
+        }
 
-    // Frees un-used capacity of the container
-    void shrink_to_fit();
+        reallocWithNewCapacity(newCapacity);
+    }
+
+    //
+    // Removes un-used capacity of the container, by reducing capacity() to size().
+    //
+    void shrink_to_fit() {
+        if (mSize == mCapacity) {
+            return;
+        }
+
+        reallocWithNewCapacity(mSize);
+    }
 
     //////////////////////////////////////////////////////
     // Modifiers
@@ -226,8 +242,31 @@ public:
     // If `count` < size, container reduced to first `count` elements.
     // If `count` > size, additional copies of T() are appended.
     //
-    void resize(uint32_t count) {
+    void resize(uint32_t count, const T& val) {
+        if (count == mSize) {
+            // do nothing
+            return;
+        } 
 
+        if (count < mSize) {
+            // container reduced to first `count` elements
+            for (int i = count; i < mSize; i++) {
+                utils::allocDestroy(alloc, buffPtr + i);
+            }
+            mSize = count;
+            return;
+        }
+
+        // count > size ==> additional copies of T() are appended
+        reserve(count);
+        for (int i = mSize; i < count; i++) {
+            utils::allocConstruct(alloc, buffPtr + i, val);
+        }
+        mSize = count;
+    }
+
+    void resize(uint32_t count) {
+        resize(count, T());
     }
 
     //////////////////////////////////////////////////////
@@ -374,27 +413,33 @@ private:
         }
     }
 
+    void reallocWithNewCapacity(uint32_t newCapacity) {
+        // create new buffer
+        T* newBuffPtr = alloc.allocate(newCapacity);
+
+        if (buffPtr != nullptr && mCapacity > 0) {
+            // copy n elements from old buffer into new buffer
+            for (int i = 0; i < mSize; i++) {
+                utils::allocConstruct(alloc, newBuffPtr + i, buffPtr[i]);
+            }
+
+            // teardown old buffer
+            for (int i = 0; i < mSize; ++i) {
+                utils::allocDestroy(alloc, buffPtr + i);
+            }
+            alloc.deallocate(buffPtr, mCapacity);
+        }
+
+        // update new buffer
+        buffPtr = newBuffPtr;
+        mCapacity = newCapacity;
+    }
+
     //
     // Grow the buffer 2x in capacity
     //
     void grow() {
-        // create new buffer of 2x capacity
-        T* newBuffPtr = alloc.allocate(2 * mCapacity);
-
-        // copy n elements from old buffer into new buffer
-        for (int i = 0; i < mSize; i++) {
-            utils::allocConstruct(alloc, newBuffPtr + i, buffPtr[i]);
-        }
-
-        // teardown old buffer
-        for (int i = 0; i < mSize; ++i) {
-            utils::allocDestroy(alloc, buffPtr + i);
-        }
-        alloc.deallocate(buffPtr, mCapacity);
-
-        // update new buffer
-        buffPtr = newBuffPtr;
-        mCapacity = 2 * mCapacity;
+        reallocWithNewCapacity(2 * mCapacity);
     }
 };
 

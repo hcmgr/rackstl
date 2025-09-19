@@ -87,7 +87,7 @@ namespace rack {
 // vector tests
 ////////////////////////////////////////
 
-TEST(vector_test, general) {
+TEST(vector_test, pushBackEmplaceBack) {
 
     //
     // test vector of standard type (i.e. 'int')
@@ -257,6 +257,56 @@ TEST(vector_test, insertErase) {
     std::vector<int> expected = {10, 11, 12, 13};
     for (size_t i = 0; i < expected.size(); i++) {
         EXPECT_EQ(vec[i], expected[i]);
+    }
+}
+
+TEST(vector_test, reserveShrinkResize) {
+    int n = 100;
+
+    //
+    // reserve
+    //
+    rack::vector<int> vec1;
+    vec1.reserve(n);
+    EXPECT_EQ(vec1.capacity(), n);
+    for (int i = 0; i < n; i++) {
+        vec1.push_back(i);
+    }
+    EXPECT_EQ(vec1.size(), n);
+    EXPECT_EQ(vec1.capacity(), n);
+    vec1.push_back(n);
+    EXPECT_EQ(vec1.size(), n + 1);
+    EXPECT_GT(vec1.capacity(), n + 1);
+    n += 1;
+    
+    //
+    // shrink_to_fit
+    //
+    vec1.shrink_to_fit();
+    EXPECT_EQ(vec1.size(), n);
+    EXPECT_EQ(vec1.capacity(), n);
+    
+    //
+    // resize growing
+    //
+    int growSize = 2 * n;
+    vec1.resize(growSize, 420);
+    EXPECT_EQ(vec1.size(), growSize);
+    EXPECT_GE(vec1.capacity(), growSize);
+    for (int i = 0; i < n; i++) {
+        EXPECT_EQ(vec1[i], i);
+    }
+    for (int i = n; i < growSize; i++) {
+        EXPECT_EQ(vec1[i], 420);
+    }
+
+    //
+    // resize shrinking
+    //
+    vec1.resize(n);
+    EXPECT_EQ(vec1.size(), n);
+    for (int i = 0; i < n; i++) {
+        EXPECT_EQ(vec1[i], i);
     }
 }
 
