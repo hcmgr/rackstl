@@ -181,28 +181,83 @@ TEST(vector_test, iterate) {
     EXPECT_TRUE(std::is_sorted(vec3.begin(), vec3.end()));
 }
 
-TEST(vector_test, erase) {
-    rack::vector<int> vec1;
-    int N = 20;
-    for (int i = 0; i < N; i++) {
-        vec1.push_back(i + 10);
+TEST(vector_test, insertErase) {
+    //
+    // empty vector insert
+    //
+    rack::vector<int> vec;
+    EXPECT_TRUE(vec.empty());
+    vec.insert(vec.begin(), 42);
+    EXPECT_EQ(vec.size(), 1);
+    EXPECT_EQ(vec[0], 42);
+
+    //
+    // single element erase
+    //
+    vec.erase(vec.begin());
+    EXPECT_TRUE(vec.empty());
+    EXPECT_EQ(vec.size(), 0);
+
+    //
+    // empty erase
+    //
+    vec.erase(vec.begin());
+    EXPECT_TRUE(vec.empty());
+    EXPECT_EQ(vec.size(), 0);
+
+    //
+    // insert multiple at end
+    //
+    for (int i = 0; i < 5; i++) {
+        vec.push_back(i + 10);  // [10,11,12,13,14]
     }
-    std::cout << vec1.toString();
-    vec1.erase(vec1.begin());
-    std::cout << vec1.toString();
+    EXPECT_EQ(vec.size(), 5);
+    for (int i = 0; i < 5; i++) {
+        EXPECT_EQ(vec[i], i + 10);
+    }
 
-    rack::vector<int> vec2;
-    vec2.push_back(1);
-    std::cout << vec2.toString();
-    vec2.erase(vec2.begin());
-    std::cout << vec2.toString();
+    //
+    // insert multiple at beginning
+    //
+    vec.insert(vec.begin(), 99); // [99,10,11,12,13,14]
+    EXPECT_EQ(vec.size(), 6);
+    EXPECT_EQ(vec[0], 99);
 
-    vec2.erase(vec2.begin());
-    std::cout << vec2.toString();
-}
+    //
+    // insert in middle
+    //
+    vec.insert(vec.begin() + 3, 77); // [99,10,11,77,12,13,14]
+    EXPECT_EQ(vec.size(), 7);
+    EXPECT_EQ(vec[3], 77);
 
-TEST(vector_test, insert) {
+    //
+    // erase first element
+    //
+    vec.erase(vec.begin()); // [10,11,77,12,13,14]
+    EXPECT_EQ(vec.size(), 6);
+    EXPECT_EQ(vec[0], 10);
 
+    //
+    // erase middle element
+    //
+    vec.erase(vec.begin() + 2); // remove 77 -> [10,11,12,13,14]
+    EXPECT_EQ(vec.size(), 5);
+    EXPECT_EQ(vec[2], 12);
+
+    //
+    // erase last element
+    //
+    vec.erase(vec.end() - 1); // remove 14 -> [10,11,12,13]
+    EXPECT_EQ(vec.size(), 4);
+    EXPECT_EQ(vec[3], 13);
+
+    //
+    // final content check
+    //
+    std::vector<int> expected = {10, 11, 12, 13};
+    for (size_t i = 0; i < expected.size(); i++) {
+        EXPECT_EQ(vec[i], expected[i]);
+    }
 }
 
 ////////////////////////////////////////

@@ -26,7 +26,7 @@ public:
     vector() 
         : buffPtr(nullptr), mCapacity(0), mSize(0) 
     {
-        // do nothing - allocation of `buffPtr` occurs on first element added
+        // do nothing - lazily allocate buffer
     }
 
     ~vector() {
@@ -127,44 +127,18 @@ public:
     //
     template <typename... Args>
     void emplace_back(Args&&... args) {
-        // first element added - allocate buffer of capacity 1
+        // lazily allocate buffer on first insertion
         if (mCapacity == 0) {
-            assert(mSize == 0 && buffPtr == nullptr);
             mCapacity = 1;
             buffPtr = alloc.allocate(mCapacity);
         }
 
-        // enough space for val
-        if (mSize < mCapacity) {
-            utils::allocConstruct(alloc, buffPtr + mSize, std::forward<Args>(args)...);
-            mSize++;
-            return;
+        // grow buffer if out of capacity
+        if (mSize == mCapacity) {
+            grow();
         }
 
-        // 
-        // not enough space for val - grow the container
-        //
-
-        // create new buffer of size 2n
-        T* newBuffPtr = alloc.allocate(2 * mCapacity);
-
-        // copy n elements from old buffer into new buffer
-        for (int i = 0; i < mSize; i++) {
-            utils::allocConstruct(alloc, newBuffPtr + i, buffPtr[i]);
-        }
-        
-        // add val
-        utils::allocConstruct(alloc, newBuffPtr + mSize, std::forward<Args>(args)...);
-
-        // teardown old buffer
-        for (int i = 0; i < mSize; ++i) {
-            utils::allocDestroy(alloc, buffPtr + i);
-        }
-        alloc.deallocate(buffPtr, mCapacity);
-
-        // update new buffer
-        buffPtr = newBuffPtr;
-        mCapacity = 2 * mCapacity;
+        utils::allocConstruct(alloc, buffPtr + mSize, std::forward<Args>(args)...);
         mSize++;
     }
 
@@ -175,37 +149,41 @@ public:
         emplace_back(val);
     }
 
+    //
     // Inserts a copy of `val` before `pos`
-    void insert(T val, uint32_t pos) {
-
-    }
-
-    // 
-    // Shift all elements in range [startIdx, endIdx] (inclusive) one position to the left.
     //
-    void shiftLeft(uint32_t startIdx, uint32_t endIdx) {
-        assert(startIdx <= endIdx);
-
-        uint32_t currIdx = startIdx - 1;
-        while (currIdx != endIdx) {
-            buffPtr[currIdx] = std::move(buffPtr[currIdx + 1]);
-            currIdx++;
-        }
-    }
-
-    // 
-    // Shift all elements in range [startIdx, endIdx] (inclusive) one position to the right.
-    // We assume there is available capacity.
-    //
-    void shiftRight(uint32_t startIdx, uint32_t endIdx) {
-        assert(startIdx <= endIdx);
-
-        uint32_t currIdx = startIdx - 1;
-        while (currIdx != endIdx) {
-            buffPtr[currIdx] = std::move(buffPtr[currIdx + 1]);
-            currIdx++;
+    iterator insert(iterator pos, T val) {
+        // lazily allocate buffer on first insertion
+        if (mCapacity == 0) {
+            mCapacity = 1;
+            buffPtr = alloc.allocate(mCapacity);
+            pos = iterator(buffPtr);
         }
 
+        // invalid range
+        if (pos < begin() || pos > end()) {
+            return end();
+        }
+
+        int32_t posOff = pos.ptr - buffPtr;
+
+        // grow buffer if out of capacity
+        if (mSize == mCapacity) {
+            grow();
+        }
+
+        // shift all right-elements one position to right
+        if (mSize > 1) {
+            int32_t startOff = posOff;
+            int32_t endOff = mSize - 1;
+            if (endOff - startOff >= 0) {
+                shiftRight(startOff, endOff);
+            }
+        }
+
+        utils::allocConstruct(alloc, buffPtr + posOff, val);
+        mSize++;
+        return iterator(buffPtr + posOff);
     }
 
     // Erases element at `pos` from container
@@ -216,19 +194,17 @@ public:
         }
 
         // erase element
-        uint32_t posOff = pos.ptr - buffPtr;
+        int32_t posOff = pos.ptr - buffPtr;
         utils::allocDestroy(alloc, buffPtr + posOff);
-        utils::allocConstruct(alloc, buffPtr + posOff, T());
 
         // shift all right-elements one position to left
         if (mSize > 1) {
-            uint32_t startOff = posOff + 1;
-            uint32_t endOff = mSize - 1;
+            int32_t startOff = posOff + 1;
+            int32_t endOff = mSize - 1;
             if (endOff - startOff >= 0) {
                 shiftLeft(startOff, endOff);
             }
             utils::allocDestroy(alloc, buffPtr + endOff);
-            utils::allocConstruct(alloc, buffPtr + endOff, T());
         }
 
         mSize--;
@@ -369,6 +345,56 @@ private:
         buffPtr = nullptr;
         mSize = 0;
         mCapacity = 0;
+    }
+
+    // 
+    // Shift all elements in range [startIdx, endIdx] (inclusive) one position to the left.
+    //
+    void shiftLeft(uint32_t startIdx, uint32_t endIdx) {
+        assert(startIdx <= endIdx);
+
+        uint32_t currIdx = startIdx - 1;
+        while (currIdx != endIdx) {
+            buffPtr[currIdx] = std::move(buffPtr[currIdx + 1]);
+            currIdx++;
+        }
+    }
+
+    // 
+    // Shift all elements in range [startIdx, endIdx] (inclusive) one position to the right.
+    // Note that we assume there is available capacity.
+    //
+    void shiftRight(uint32_t startIdx, uint32_t endIdx) {
+        assert(startIdx <= endIdx);
+
+        uint32_t currIdx = endIdx + 1;
+        while (currIdx != startIdx) {
+            buffPtr[currIdx] = std::move(buffPtr[currIdx - 1]);
+            currIdx--;
+        }
+    }
+
+    //
+    // Grow the buffer 2x in capacity
+    //
+    void grow() {
+        // create new buffer of 2x capacity
+        T* newBuffPtr = alloc.allocate(2 * mCapacity);
+
+        // copy n elements from old buffer into new buffer
+        for (int i = 0; i < mSize; i++) {
+            utils::allocConstruct(alloc, newBuffPtr + i, buffPtr[i]);
+        }
+
+        // teardown old buffer
+        for (int i = 0; i < mSize; ++i) {
+            utils::allocDestroy(alloc, buffPtr + i);
+        }
+        alloc.deallocate(buffPtr, mCapacity);
+
+        // update new buffer
+        buffPtr = newBuffPtr;
+        mCapacity = 2 * mCapacity;
     }
 };
 
