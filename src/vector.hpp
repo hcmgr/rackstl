@@ -29,10 +29,6 @@ public:
         // do nothing - lazily allocate buffer
     }
 
-    ~vector() {
-        destroy();
-    }
-
     // Constructs container of `n` copies of `val`.
     vector(uint32_t n, T val) 
         : mCapacity(n), mSize(n) 
@@ -41,6 +37,10 @@ public:
         for (int i = 0; i < n; i++) {
             buffPtr[i] = val;
         }
+    }
+
+    ~vector() {
+        destroy();
     }
 
     // Copy constructor
