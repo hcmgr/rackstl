@@ -853,7 +853,7 @@ TEST(bst_test, general) {
     EXPECT_EQ(node->kv.first, 5);
     EXPECT_EQ(node->left->kv.first, 4);
     EXPECT_EQ(node->right->kv.first, 6);
-    // std::cout << "\n\n\n" << tree->toString();
+    std::cout << "\n\n\n" << tree->toString();
 
     //
     // clear
@@ -861,5 +861,14 @@ TEST(bst_test, general) {
     tree->clear();
     ASSERT_EQ(tree->size(), 0);
     ASSERT_EQ(tree->root, nullptr);
+}
+
+TEST(rb_test, general) {
+    rack::RBTree<int, int>* rbTree = new rack::RBTree<int, int>();
+    rbTree->insert({2, 2});
+    rbTree->insert({1, 1});
+    rbTree->insert({3, 3});
+    rbTree->insert({4, 4});
+    std::cout << "\n\n\n" << rbTree->toString();
 }
 }; // end 'rack'
