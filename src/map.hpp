@@ -228,8 +228,6 @@ private:
         }
     }
 
-
-
     void clearPostOrder(Node* currNode) {
         if (currNode == nullptr) {
             return;
