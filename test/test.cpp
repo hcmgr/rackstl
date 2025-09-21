@@ -17,6 +17,7 @@
 #include "weak_ptr.hpp"
 #include "deque.hpp"
 #include "unordered_map.hpp"
+#include "map.hpp"
 
 //
 // Test class. Used to test 'custom object' behaviour of our data structures. 
@@ -668,7 +669,6 @@ TEST(deque_test, iterate) {
         deque_testIterateHelper<MyClass>(chunkSize, n);
     }
 }
-};
 
 ////////////////////////////////////////
 // unordered_map tests
@@ -716,5 +716,150 @@ TEST(unordered_map_test, general) {
 
     // test iterator
     // note: separate test for this
+}
 
+////////////////////////////////////////
+// BST tests 
+////////////////////////////////////////
+TEST(bst_test, general) {
+    rack::BSTTree<int, int>* tree = new rack::BSTTree<int, int>();
+
+    //
+    // tree 1 (sideways view):
+    //
+    //          8
+    //      7   
+    //          6
+    //  5       
+    //          4
+    //      3
+    //          2
+    //              1
+    //
+
+    //
+    // insert and find
+    //
+    tree->insert({5, 5}); // level 1
+    tree->insert({3, 3}); // level 2
+    tree->insert({7, 7}); 
+    tree->insert({2, 2}); // level 3
+    tree->insert({4, 4});
+    tree->insert({6, 6});
+    tree->insert({8, 8});
+    tree->insert({1, 1}); // level 4
+    // std::cout << tree->toString();
+    rack::vector<int> v = tree->inOrderVec();
+
+    // validate in-order traversal
+    ASSERT_EQ(v, rack::vector<int>({1,2,3,4,5,6,7,8}));
+
+    // validate tree structure
+    BSTNode<int, int>* node;
+    node = tree->find(2);
+    ASSERT_EQ(node->kv.first, 2);
+    ASSERT_EQ(node->left->kv.first, 1);
+    ASSERT_EQ(node->right, nullptr);
+    node = tree->find(4);
+    ASSERT_EQ(node->kv.first, 4);
+    ASSERT_EQ(node->left, nullptr);
+    ASSERT_EQ(node->right, nullptr);
+    node = tree->find(6);
+    ASSERT_EQ(node->kv.first, 6);
+    ASSERT_EQ(node->left, nullptr);
+    ASSERT_EQ(node->right, nullptr);
+    node = tree->find(8);
+    ASSERT_EQ(node->kv.first, 8);
+    ASSERT_EQ(node->left, nullptr);
+    ASSERT_EQ(node->right, nullptr);
+    node = tree->find(3);
+    ASSERT_EQ(node->kv.first, 3);
+    ASSERT_EQ(node->left->kv.first, 2);
+    ASSERT_EQ(node->right->kv.first, 4);
+    node = tree->find(7);
+    ASSERT_EQ(node->kv.first, 7);
+    ASSERT_EQ(node->left->kv.first, 6);
+    ASSERT_EQ(node->right->kv.first, 8);
+    node = tree->find(5);
+    ASSERT_EQ(node->kv.first, 5);
+    ASSERT_EQ(node->left->kv.first, 3);
+    ASSERT_EQ(node->right->kv.first, 7);
+    node = tree->find(0);
+    ASSERT_EQ(node, nullptr);
+    node = tree->find(9);
+    ASSERT_EQ(node, nullptr);
+
+    // 
+    // erase
+    //
+    bool res;
+
+    // erase 8 (child)
+    res = tree->erase(8);
+    node = tree->find(7);
+
+    //
+    //          
+    //      7   
+    //          6
+    //  5       
+    //          4
+    //      3
+    //          2
+    //              1
+    //
+    EXPECT_EQ(res, true);
+    EXPECT_EQ(node->kv.first, 7);
+    EXPECT_EQ(node->left->kv.first, 6);
+    EXPECT_EQ(node->right, nullptr);
+
+    // erase 7 (node with one-child)
+    res = tree->erase(7);
+
+    //
+    //          
+    //      6   
+    //
+    //  5       
+    //          4
+    //      3
+    //          2
+    //              1
+    //
+    node = tree->find(5);
+    EXPECT_EQ(res, true);
+    EXPECT_EQ(node->kv.first, 5);
+    EXPECT_EQ(node->left->kv.first, 3);
+    EXPECT_EQ(node->right->kv.first, 6);
+
+    // erase 3 (node with two-children)
+    res = tree->erase(3);
+    
+    //          
+    //      6   
+    //
+    //  5       
+    //          
+    //      4
+    //          2
+    //              1
+    //
+    node = tree->find(4);
+    EXPECT_EQ(res, true);
+    EXPECT_EQ(node->kv.first, 4);
+    EXPECT_EQ(node->left->kv.first, 2);
+    EXPECT_EQ(node->right, nullptr);
+    node = tree->find(5);
+    EXPECT_EQ(node->kv.first, 5);
+    EXPECT_EQ(node->left->kv.first, 4);
+    EXPECT_EQ(node->right->kv.first, 6);
+    // std::cout << "\n\n\n" << tree->toString();
+
+    //
+    // clear
+    //
+    tree->clear();
+    ASSERT_EQ(tree->size(), 0);
+    ASSERT_EQ(tree->root, nullptr);
+}
 }; // end 'rack'

@@ -29,6 +29,20 @@ public:
         // do nothing - lazily allocate buffer
     }
 
+    // initializer-list constructor
+    vector(std::initializer_list<T> init)
+    {
+        mCapacity = init.size();
+        mSize = init.size();
+        buffPtr = alloc.allocate(mCapacity);
+
+        uint32_t i = 0;
+        for (const auto& val : init) {
+            std::allocator_traits<std::allocator<T>>::construct(alloc, buffPtr + i, val);
+            i++;
+        }
+    }
+
     // Constructs container of `n` copies of `val`.
     vector(uint32_t n, T val) 
         : mCapacity(n), mSize(n) 
@@ -50,19 +64,21 @@ public:
 
     // Move constructor 
     vector(vector&& other) {
-        moveOther();
+        moveOther(other);
     }
 
     // Copy assign
     vector& operator=(const vector& other) {
         destroy();
         copyOther(other);
+        return *this;
     }
 
     // Move assign
     vector& operator=(vector&& other) noexcept {
         destroy();
         moveOther(other);
+        return *this;
     }
 
     //////////////////////////////////////////////////////
@@ -351,6 +367,19 @@ public:
     }
 
     //////////////////////////////////////////////////////
+    // Other operators
+    //////////////////////////////////////////////////////
+    bool operator==(const vector& other) const {
+        if (mSize != other.mSize) return false;
+        for (uint32_t i = 0; i < mSize; i++) {
+            if (!(buffPtr[i] == other.buffPtr[i])) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    //////////////////////////////////////////////////////
     // Helpers
     //////////////////////////////////////////////////////
 
@@ -364,7 +393,7 @@ private:
         }
     }
 
-    void moveOther(vector&& other) {
+    void moveOther(vector& other) {
         mCapacity = other.mCapacity;
         mSize = other.mSize;
         buffPtr = other.buffPtr;

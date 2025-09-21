@@ -213,6 +213,14 @@ public:
         }
     }
 
+    //
+    // TODO: emplace
+    //
+    template <typename... Args>
+    void emplace(Args&&... args) {
+
+    }
+
     iterator erase(iterator pos) {
         if (pos < begin() || pos >= end()) {
             throw std::runtime_error("iterator invalid");
