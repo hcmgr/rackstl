@@ -417,13 +417,82 @@ public:
 
                 // move violation up the tree
                 currNode = grandParent;
-            } else {
-                break;
+                continue;
             }
+
+            //
+            // black uncle
+            //
+            if (!uncle || uncle->colour == BLACK) {
+                // left-left
+                if (isLeftChild(parent) && isLeftChild(currNode)) {
+                    rotateRight(grandParent);
+                }
+
+                // left-right
+                if (isLeftChild(parent) && isRightChild(currNode)) {
+                    rotateLeft(parent);
+                    rotateRight(grandParent);
+                }
+
+                // right-right
+                if (isRightChild(parent) && isRightChild(currNode)) {
+                    rotateLeft(grandParent);
+                }
+
+                // right-left
+                if (isRightChild(parent) && isLeftChild(currNode)) {
+                    rotateRight(parent);
+                    rotateLeft(grandParent);
+                }
+
+                assert(false); // never reach here
+            }
+            assert(false); // never reach here
         }
 
         // always enforce black root
         root->colour = BLACK;
+    }
+
+    // Rotates RBTree rooted at `root` left
+    Node* rotateLeft(Node* root) {
+        Node* right = root->right;
+        if (right == nullptr) return right;
+
+        // root's right becomes right's left
+        root->right = right->left;
+
+        // right's left becomes root
+        right->left = root;
+
+        updateParentRef(root, right);
+
+        // update parents
+        right->parent = root->parent;
+        root->parent = right;
+
+        return right; // return new root
+    }
+
+    // Rotates RBTree rooted at `root` right
+    Node* rotateRight(Node* root) {
+        Node* left = root->left;
+        if (left == nullptr) return root;
+
+        // root's left becomes left's right
+        root->left = left->right;
+
+        // left's right becomes root
+        left->right = root;
+
+        updateParentRef(root, left);
+
+        // update parents
+        left->parent = root->parent;
+        root->parent = left;
+
+        return left; // return new root
     }
 
     Node* getUncle(Node* node) {
@@ -568,17 +637,25 @@ public:
     // Returns side-ways view of BST
     std::string toString() {
         std::ostringstream oss;
-        toStringHelper(root, oss, 0);
+        if (root == nullptr) {
+            oss << "[EMPTY]" << "\n";
+            return oss.str();
+        } else {
+            toStringHelper(root, oss, 0);
+        }
         return oss.str();
     }
     
 private:
-
     //
     // Updates parent of `oldNode` to point to `newNode` instead
     //
     void updateParentRef(Node* oldNode, Node* newNode) {
         Node* parent = oldNode->parent;
+        if (parent == nullptr) {
+            return;
+        }
+
         if (parent->left == oldNode) {
             parent->left = newNode;
         } else if (parent->right == oldNode) {
@@ -619,6 +696,20 @@ private:
 
         // left subtree
         toStringHelper(node->left, oss, depth + 1);
+    }
+
+    bool isLeftChild(Node* node) {
+        if (node == nullptr) return false;
+        Node* parent = node->parent;
+        if (parent == nullptr) return false;
+        return parent->left == node;
+    }
+
+    bool isRightChild(Node* node) {
+        if (node == nullptr) return false;
+        Node* parent = node->parent;
+        if (parent == nullptr) return false;
+        return parent->right == node;
     }
 };
 

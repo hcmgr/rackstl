@@ -865,10 +865,54 @@ TEST(bst_test, general) {
 
 TEST(rb_test, general) {
     rack::RBTree<int, int>* rbTree = new rack::RBTree<int, int>();
-    rbTree->insert({2, 2});
-    rbTree->insert({1, 1});
+
+    // no recolour needed
+    rbTree->insert({5, 5});
+    rbTree->insert({7, 7});
     rbTree->insert({3, 3});
-    rbTree->insert({4, 4});
+
+    //  
+    //      7(R)
+    //  5(B)
+    //      3(R)
+    //
     std::cout << "\n\n\n" << rbTree->toString();
+
+    // recolour - red-uncle
+    rbTree->insert({8, 8});
+
+    //
+    //          8(R)
+    //      7(B)    
+    //  5(B)
+    //      3(B)
+    //
+    std::cout << "\n\n\n" << rbTree->toString();
+
+    // no recolour needed
+    rbTree->insert({4, 4});
+
+    //
+    //          8(R)
+    //      7(B)    
+    //          4(R)
+    //  5(B)
+    //      3(B)
+    //
+    std::cout << "\n\n\n" << rbTree->toString();
+
+    // reset
+    rbTree->clear();
+    rbTree->insert({5,5});
+    rbTree->insert({4,4});
+
+    //
+    //  5(B)
+    //      4(R)
+    //
+    std::cout << "\n\n\n" << rbTree->toString();
+
+    // recolour - black-uncle - left-left
+    rbTree->insert({3,3});
 }
 }; // end 'rack'
