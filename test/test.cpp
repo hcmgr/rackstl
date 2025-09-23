@@ -18,6 +18,7 @@
 #include "deque.hpp"
 #include "unordered_map.hpp"
 #include "map.hpp"
+#include "bst.hpp"
 
 //
 // Test class. Used to test 'custom object' behaviour of our data structures. 
@@ -853,7 +854,6 @@ TEST(bst_test, general) {
     EXPECT_EQ(node->kv.first, 5);
     EXPECT_EQ(node->left->kv.first, 4);
     EXPECT_EQ(node->right->kv.first, 6);
-    std::cout << "\n\n\n" << tree->toString();
 
     //
     // clear
@@ -863,56 +863,254 @@ TEST(bst_test, general) {
     ASSERT_EQ(tree->root, nullptr);
 }
 
-TEST(rb_test, general) {
-    rack::RBTree<int, int>* rbTree = new rack::RBTree<int, int>();
+TEST(bst_test, leftRightRotations) {
+    rack::BSTTree<int, int>* tree = new rack::BSTTree<int, int>();
 
-    // no recolour needed
-    rbTree->insert({5, 5});
-    rbTree->insert({7, 7});
-    rbTree->insert({3, 3});
-
-    //  
-    //      7(R)
-    //  5(B)
-    //      3(R)
+    tree->insert({5,5});
+    tree->insert({7,7});
+    tree->insert({3,3});
     //
-    std::cout << "\n\n\n" << rbTree->toString();
-
-    // recolour - red-uncle
-    rbTree->insert({8, 8});
-
+    //      7
+    //  5
+    //      3
     //
-    //          8(R)
-    //      7(B)    
-    //  5(B)
-    //      3(B)
-    //
-    std::cout << "\n\n\n" << rbTree->toString();
+    ASSERT_EQ(tree->root->kv.first, 5);
+    ASSERT_EQ(tree->root->left->kv.first, 3);
+    ASSERT_EQ(tree->root->right->kv.first, 7);
 
-    // no recolour needed
-    rbTree->insert({4, 4});
-
+    tree->rotateLeft(tree->root);
     //
-    //          8(R)
-    //      7(B)    
-    //          4(R)
-    //  5(B)
-    //      3(B)
+    //  7
+    //      5
+    //          3
     //
-    std::cout << "\n\n\n" << rbTree->toString();
+    ASSERT_EQ(tree->root->kv.first, 7);
+    ASSERT_EQ(tree->root->left->kv.first, 5);
+    ASSERT_EQ(tree->root->left->left->kv.first, 3);
 
-    // reset
-    rbTree->clear();
-    rbTree->insert({5,5});
-    rbTree->insert({4,4});
-
+    tree->rotateLeft(tree->root);
     //
-    //  5(B)
-    //      4(R)
+    //  7
+    //      5
+    //          3
     //
-    std::cout << "\n\n\n" << rbTree->toString();
+    ASSERT_EQ(tree->root->kv.first, 7);
+    ASSERT_EQ(tree->root->left->kv.first, 5);
+    ASSERT_EQ(tree->root->left->left->kv.first, 3);
 
-    // recolour - black-uncle - left-left
-    rbTree->insert({3,3});
+    tree->rotateRight(tree->root);
+    tree->rotateRight(tree->root);
+    //
+    //          7
+    //      5
+    //  3
+    //
+    ASSERT_EQ(tree->root->kv.first, 3);
+    ASSERT_EQ(tree->root->right->kv.first, 5);
+    ASSERT_EQ(tree->root->right->right->kv.first, 7);
+
+    tree->rotateRight(tree->root);
+    //
+    //          7
+    //      5
+    //  3
+    //
+    ASSERT_EQ(tree->root->kv.first, 3);
+    ASSERT_EQ(tree->root->right->kv.first, 5);
+    ASSERT_EQ(tree->root->right->right->kv.first, 7);
+
+    tree->rotateLeft(tree->root);
+    tree->insert({2,2});
+    tree->insert({4,4});
+    //
+    //      7
+    //  5
+    //          4
+    //      3
+    //          2
+    //
+    ASSERT_EQ(tree->root->kv.first, 5);
+    ASSERT_EQ(tree->root->left->kv.first, 3);
+    ASSERT_EQ(tree->root->left->left->kv.first, 2);
+    ASSERT_EQ(tree->root->left->right->kv.first, 4);
+
+    tree->rotateLeft(tree->root->left);
+    //
+    //      7
+    //  5
+    //      4
+    //          3
+    //              2
+    //
+    ASSERT_EQ(tree->root->kv.first, 5);
+    ASSERT_EQ(tree->root->left->kv.first, 4);
+    ASSERT_EQ(tree->root->left->left->kv.first, 3);
+    ASSERT_EQ(tree->root->left->left->left->kv.first, 2);
+
+    tree->rotateRight(tree->root->left);
+    tree->rotateRight(tree->root->left);
+    ASSERT_EQ(tree->root->kv.first, 5);
+    ASSERT_EQ(tree->root->left->kv.first, 2);
+    ASSERT_EQ(tree->root->left->right->kv.first, 3);
+    ASSERT_EQ(tree->root->left->right->right->kv.first, 4);
 }
+
+TEST(bst_test, comboRotations) {
+    rack::BSTTree<int, int>* tree = new rack::BSTTree<int, int>();
+
+    tree->insert({6,6});
+    tree->insert({3,3});
+    tree->insert({8,8});
+    tree->insert({1,1});
+    tree->insert({4,4});
+    
+    //
+    //      8
+    //  6   
+    //          4
+    //      3
+    //          1
+    //
+    ASSERT_EQ(tree->root->kv.first, 6);
+    ASSERT_EQ(tree->root->left->kv.first, 3);
+    ASSERT_EQ(tree->root->right->kv.first, 8);
+    ASSERT_EQ(tree->root->left->left->kv.first, 1);
+    ASSERT_EQ(tree->root->left->right->kv.first, 4);
+
+    /////////////////////////////////////////
+    // left-left
+    /////////////////////////////////////////
+
+    tree->rotateLeftLeft(tree->root);
+    tree->insert({2,2});
+    //
+    //          8
+    //      6
+    //          4
+    //  3
+    //          2
+    //      1
+    //
+    ASSERT_EQ(tree->root->kv.first, 3);
+    ASSERT_EQ(tree->root->left->kv.first, 1);
+    ASSERT_EQ(tree->root->left->right->kv.first, 2);
+    ASSERT_EQ(tree->root->right->kv.first, 6);
+    ASSERT_EQ(tree->root->right->left->kv.first, 4);
+    ASSERT_EQ(tree->root->right->right->kv.first, 8);
+
+    /////////////////////////////////////////
+    // left-right
+    /////////////////////////////////////////
+
+    tree->rotateLeftRight(tree->root->left, tree->root);
+    //
+    //                                      8
+    //          8                       6
+    //      6                               4
+    //          4                   3
+    //  3               ->      2
+    //      2                       1
+    //          1
+    //
+    ASSERT_EQ(tree->root->kv.first, 2);
+    ASSERT_EQ(tree->root->left->kv.first, 1);
+    ASSERT_EQ(tree->root->right->kv.first, 3);
+    ASSERT_EQ(tree->root->right->right->kv.first, 6);
+    ASSERT_EQ(tree->root->right->right->left->kv.first, 4);
+    ASSERT_EQ(tree->root->right->right->right->kv.first, 8);
+
+    /////////////////////////////////////////
+    // right-right
+    /////////////////////////////////////////
+
+    tree->rotateRightRight(tree->root->right);
+    //
+    //              8
+    //          6
+    //                  4
+    //              3
+    //      2
+    //          1
+    //
+    ASSERT_EQ(tree->root->kv.first, 2);
+    ASSERT_EQ(tree->root->left->kv.first, 1);
+    ASSERT_EQ(tree->root->right->kv.first, 6);
+    ASSERT_EQ(tree->root->right->left->kv.first, 3);
+    ASSERT_EQ(tree->root->right->right->kv.first, 8);
+    ASSERT_EQ(tree->root->right->left->right->kv.first, 4);
+
+    /////////////////////////////////////////
+    // right-left
+    /////////////////////////////////////////
+
+    tree->rotateRightLeft(tree->root->right, tree->root);
+    //
+    //                  8
+    //              6                       8
+    //                  4               6
+    //          3                           4
+    //      2                 ->    3
+    //          1                       2
+    //                                      1
+    //
+    ASSERT_EQ(tree->root->kv.first, 3);
+    ASSERT_EQ(tree->root->left->kv.first, 2);
+    ASSERT_EQ(tree->root->left->left->kv.first, 1);
+    ASSERT_EQ(tree->root->right->kv.first, 6);
+    ASSERT_EQ(tree->root->right->left->kv.first, 4);
+    ASSERT_EQ(tree->root->right->right->kv.first, 8);
+}
+
+// TEST(rb_test, general) {
+//     rack::RBTree<int, int>* rbTree = new rack::RBTree<int, int>();
+
+//     // no recolour needed
+//     rbTree->insert({5, 5});
+//     rbTree->insert({7, 7});
+//     rbTree->insert({3, 3});
+
+//     //  
+//     //      7(R)
+//     //  5(B)
+//     //      3(R)
+//     //
+//     std::cout << "\n\n\n" << rbTree->toString();
+
+//     // recolour - red-uncle
+//     rbTree->insert({8, 8});
+
+//     //
+//     //          8(R)
+//     //      7(B)    
+//     //  5(B)
+//     //      3(B)
+//     //
+//     std::cout << "\n\n\n" << rbTree->toString();
+
+//     // no recolour needed
+//     rbTree->insert({4, 4});
+
+//     //
+//     //          8(R)
+//     //      7(B)    
+//     //          4(R)
+//     //  5(B)
+//     //      3(B)
+//     //
+//     std::cout << "\n\n\n" << rbTree->toString();
+
+//     // reset
+//     rbTree->clear();
+//     rbTree->insert({5,5});
+//     rbTree->insert({4,4});
+
+//     //
+//     //  5(B)
+//     //      4(R)
+//     //
+//     std::cout << "\n\n\n" << rbTree->toString();
+
+//     // recolour - black-uncle - left-left
+//     rbTree->insert({3,3});
+// }
 }; // end 'rack'
