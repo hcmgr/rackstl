@@ -1,11 +1,11 @@
 TODO
     - map
-        - add colouring steps to ll, lr, rr, rl
-        - use BST tests to test:
-            - rotateLeft/Right
-            - ll, lr, rr, rl (without colours)
-        - then, we know this works for RB - just added colouring steps
-
+        - update map to just copy BST
+        - implement insert and erase with colouring steps
+        - test RB colouring triggers
+        - implement map using RBTree
+        - bench map 
+            - maybe even bench RBTree vs BSTTree versions of map
     - priority_queue
     - unordered_map
         - reserve

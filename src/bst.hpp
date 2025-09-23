@@ -82,74 +82,6 @@ public:
         return currNode;
     }
 
-    // Rotates RBTree rooted at `root` left
-    void rotateLeft(Node* root) {
-        if (root == nullptr) return;
-
-        Node* right = root->right;
-        if (right == nullptr) return;
-
-        // root's right becomes right's left
-        root->right = right->left;
-
-        // right's left becomes root
-        right->left = root;
-
-        updateParentRef(root, right);
-
-        // update parents
-        right->parent = root->parent;
-        root->parent = right;
-
-        // update global root, if necessary
-        if (this->root == root) {
-            this->root = right;
-        }
-    }
-
-    // Rotates RBTree rooted at `root` right
-    void rotateRight(Node* root) {
-        if (root == nullptr) return;
-
-        Node* left = root->left;
-        if (left == nullptr) return;
-
-        // root's left becomes left's right
-        root->left = left->right;
-
-        // left's right becomes root
-        left->right = root;
-
-        updateParentRef(root, left);
-
-        // update parents
-        left->parent = root->parent;
-        root->parent = left;
-
-        // update global root, if necessary
-        if (this->root == root) {
-            this->root = left;
-        }
-    }
-
-    void rotateLeftLeft(Node* grandParent) {
-        rotateRight(grandParent);
-    }
-
-    void rotateLeftRight(Node* parent, Node* grandParent) {
-        rotateLeft(parent);
-        rotateRight(grandParent);
-    }
-
-    void rotateRightRight(Node* grandParent) {
-        rotateLeft(grandParent);
-    }
-
-    void rotateRightLeft(Node* parent, Node* grandParent) {
-        rotateRight(parent);
-        rotateLeft(grandParent);
-    }
-
     bool erase(const K& key) {
         Node* node = find(key);
         if (node == nullptr) {
@@ -243,6 +175,91 @@ public:
         return vec;
     }
 
+    // Returns side-ways view of BST
+    std::string toString() {
+        std::ostringstream oss;
+        if (root == nullptr) {
+            oss << "[EMPTY]" << "\n";
+            return oss.str();
+        } else {
+            toStringHelper(root, oss, 0);
+        }
+        return oss.str();
+    }
+
+    //////////////////////////////////////////////////////
+    // Rotations
+    //////////////////////////////////////////////////////
+
+    // Rotates tree rooted at `root` left
+    void rotateLeft(Node* root) {
+        if (root == nullptr) return;
+
+        Node* right = root->right;
+        if (right == nullptr) return;
+
+        // root's right becomes right's left
+        root->right = right->left;
+
+        // right's left becomes root
+        right->left = root;
+
+        updateParentRef(root, right);
+
+        // update parents
+        right->parent = root->parent;
+        root->parent = right;
+
+        // update global root, if necessary
+        if (this->root == root) {
+            this->root = right;
+        }
+    }
+
+    // Rotates tree rooted at `root` right
+    void rotateRight(Node* root) {
+        if (root == nullptr) return;
+
+        Node* left = root->left;
+        if (left == nullptr) return;
+
+        // root's left becomes left's right
+        root->left = left->right;
+
+        // left's right becomes root
+        left->right = root;
+
+        updateParentRef(root, left);
+
+        // update parents
+        left->parent = root->parent;
+        root->parent = left;
+
+        // update global root, if necessary
+        if (this->root == root) {
+            this->root = left;
+        }
+    }
+
+    void rotateLeftLeft(Node* grandParent) {
+        rotateRight(grandParent);
+    }
+
+    void rotateLeftRight(Node* parent, Node* grandParent) {
+        rotateLeft(parent);
+        rotateRight(grandParent);
+    }
+
+    void rotateRightRight(Node* grandParent) {
+        rotateLeft(grandParent);
+    }
+
+    void rotateRightLeft(Node* parent, Node* grandParent) {
+        rotateRight(parent);
+        rotateLeft(grandParent);
+    }
+
+private:
     //
     // Returns in-order successor of `node`
     //
@@ -272,19 +289,6 @@ public:
         return succ;
     }
 
-    // Returns side-ways view of BST
-    std::string toString() {
-        std::ostringstream oss;
-        if (root == nullptr) {
-            oss << "[EMPTY]" << "\n";
-            return oss.str();
-        } else {
-            toStringHelper(root, oss, 0);
-        }
-        return oss.str();
-    }
-
-private:
     //
     // Updates parent of `oldNode` to point to `newNode` instead
     //
