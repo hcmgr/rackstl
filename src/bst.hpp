@@ -1,7 +1,9 @@
 #pragma once
 #include <memory>
 #include <algorithm>
-#include <vector>
+#include <ostream>
+#include <cassert>
+#include "vector.hpp"
 
 namespace rack {
 

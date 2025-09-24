@@ -957,7 +957,6 @@ TEST(bst_test, leftRightRotations) {
 
 TEST(bst_test, comboRotations) {
     rack::BSTTree<int, int>* tree = new rack::BSTTree<int, int>();
-
     tree->insert({6,6});
     tree->insert({3,3});
     tree->insert({8,8});
@@ -1061,56 +1060,58 @@ TEST(bst_test, comboRotations) {
     ASSERT_EQ(tree->root->right->right->kv.first, 8);
 }
 
-// TEST(rb_test, general) {
-//     rack::RBTree<int, int>* rbTree = new rack::RBTree<int, int>();
+TEST(rb_test, general) {
+    rack::RBTree<int, int>* rbTree = new rack::RBTree<int, int>();
 
-//     // no recolour needed
-//     rbTree->insert({5, 5});
-//     rbTree->insert({7, 7});
-//     rbTree->insert({3, 3});
+    // no recolour needed
+    rbTree->insert({5, 5});
+    rbTree->insert({7, 7});
+    rbTree->insert({3, 3});
+    //  
+    //      7(R)
+    //  5(B)
+    //      3(R)
+    //
+    std::cout << "\n\n\n" << rbTree->toString();
 
-//     //  
-//     //      7(R)
-//     //  5(B)
-//     //      3(R)
-//     //
-//     std::cout << "\n\n\n" << rbTree->toString();
+    // recolour - red-uncle
+    rbTree->insert({8, 8});
+    //
+    //          8(R)
+    //      7(B)    
+    //  5(B)
+    //      3(B)
+    //
+    std::cout << "\n\n\n" << rbTree->toString();
 
-//     // recolour - red-uncle
-//     rbTree->insert({8, 8});
+    // no recolour needed
+    rbTree->insert({4, 4});
+    //
+    //          8(R)
+    //      7(B)    
+    //          4(R)
+    //  5(B)
+    //      3(B)
+    //
+    std::cout << "\n\n\n" << rbTree->toString();
 
-//     //
-//     //          8(R)
-//     //      7(B)    
-//     //  5(B)
-//     //      3(B)
-//     //
-//     std::cout << "\n\n\n" << rbTree->toString();
+    // reset
+    rbTree->clear();
+    rbTree->insert({5,5});
+    rbTree->insert({4,4});
+    //
+    //  5(B)
+    //      4(R)
+    //
+    std::cout << "\n\n\n" << rbTree->toString();
 
-//     // no recolour needed
-//     rbTree->insert({4, 4});
-
-//     //
-//     //          8(R)
-//     //      7(B)    
-//     //          4(R)
-//     //  5(B)
-//     //      3(B)
-//     //
-//     std::cout << "\n\n\n" << rbTree->toString();
-
-//     // reset
-//     rbTree->clear();
-//     rbTree->insert({5,5});
-//     rbTree->insert({4,4});
-
-//     //
-//     //  5(B)
-//     //      4(R)
-//     //
-//     std::cout << "\n\n\n" << rbTree->toString();
-
-//     // recolour - black-uncle - left-left
-//     rbTree->insert({3,3});
-// }
+    // recolour - black-uncle => left-left rotation
+    rbTree->insert({3,3});
+    //
+    //      5(R)
+    //  4(B)
+    //      3(R)
+    //
+    std::cout << "\n\n\n" << rbTree->toString();
+}
 }; // end 'rack'
