@@ -98,7 +98,7 @@ public:
             //      In-order successor is guaranteed left-most node in right subtree,
             //      so either a leaf or node with one-child (i.e. always a simpler delete).
             //
-            Node* succ = inorderSuccessor(node);
+            Node* succ = BSTTree::inorderSuccessor(node);
             std::swap(node->kv, succ->kv);
             node = succ;
         }
@@ -153,6 +153,72 @@ public:
                 currNode = currNode->right;
             }
         }
+    }
+
+    //
+    // Returns in-order successor of `target`.
+    // If `target` has no in-order successor, nullptr is returned (i.e. if 
+    // `target` is largest node, or `target` is nullptr).
+    //
+    static Node* inorderSuccessor(Node* target) {
+        if (target == nullptr) return nullptr;
+
+        //
+        // Case 1: right subtree exists.
+        // In-order successor is least (furthest left) node in right-subtree.
+        //
+        if (target->right != nullptr) {
+            Node* curr = target->right;
+            while (curr->left != nullptr) {
+                curr = curr->left;
+            }
+            return curr;
+        }
+
+        //
+        // Case 2: no right subtree.
+        // In-order successor is lowest ancestor that is a left child.
+        //
+        Node* curr = target;
+        Node* p = curr->parent;
+        while (p != nullptr && curr == p->right) {
+            curr = p;
+            p = p->parent;
+        }
+
+        return p; // either parent of left child, or nullptr
+    }
+
+    //
+    // Returns in-order predecessor of `node`
+    //
+    static Node* inorderPredecessor(Node* target) {
+        if (target == nullptr) return nullptr;
+
+        //
+        // Case 1: left subtree exists.
+        // In-order predecessor is largest (further right) in left subtree
+        //
+        if (target->left != nullptr) {
+            Node* curr = target->left;
+            while (curr->right) {
+                curr = curr->right;
+            }
+            return curr;
+        }
+
+        //
+        // Case 2: no left subtree.
+        // In-order precedessor is lowest ancestor that is a right child
+        //
+        Node* curr = target;
+        Node* p = curr->parent;
+        while (p != nullptr && p->left == curr) {
+            curr = p;
+            p = curr->parent;
+        }
+
+        return p; // either parent of left child, or nullptr
     }
 
     void clear() {
@@ -253,35 +319,6 @@ public:
 
 private:
     //
-    // Returns in-order successor of `node`
-    //
-    Node* inorderSuccessor(Node* target) {
-        // case 1: right subtree exists
-        if (target->right != nullptr) {
-            Node* curr = target->right;
-            while (curr->left != nullptr) {
-                curr = curr->left;
-            }
-            return curr;
-        }
-
-        // case 2: no right subtree
-        Node* succ = nullptr;
-        Node* curr = root;
-        while (curr != nullptr) {
-            if (target->kv.first < curr->kv.first) {
-                succ = curr;        // this could be successor
-                curr = curr->left;
-            } else if (target->kv.first > curr->kv.first) {
-                curr = curr->right;
-            } else {
-                break;
-            }
-        }
-        return succ;
-    }
-
-    //
     // Updates parent of `oldNode` to point to `newNode` instead
     //
     void updateParentRef(Node* oldNode, Node* newNode) {
@@ -294,6 +331,10 @@ private:
             parent->left = newNode;
         } else if (parent->right == oldNode) {
             parent->right = newNode;
+        }
+
+        if (newNode != nullptr) {
+            newNode->parent = parent;
         }
     }
 

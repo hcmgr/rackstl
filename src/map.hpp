@@ -79,6 +79,10 @@ public:
     RBTree() 
         : root(nullptr), mSize(0) {}
     
+    ~RBTree() {
+        clear();
+    }
+    
     // 
     // Returns pointer to newly inserted node, or existing node if it already exists.
     //
@@ -204,74 +208,6 @@ public:
         root->colour = BLACK;
     }
 
-    bool checkRbTree() {
-        if (this->root == nullptr) {
-            MyLog("null root");
-            return true;
-        }
-        if (this->root->colour != BLACK) {
-            MyLog("invalid rb tree - non-black root");
-            return false;
-        }
-        return checkRbTreeHelper(this->root).first;
-    }
-
-    std::pair<bool, int> checkRbTreeHelper(Node* node) {
-        // nil node
-        if (node == nullptr) {
-            return {true, -1};
-        }
-
-        // check no double red
-        if (node->colour == RED) {
-            bool doubleRed = (node->left && node->left->colour == RED) ||
-                             (node->right && node->right->colour == RED);
-            if (doubleRed) {
-                // double red - finish early
-                MyLog("invalid rb tree - double red");
-                return {false, -1};
-            }
-        }
-
-        // check equal black height
-        auto l = checkRbTreeHelper(node->left);
-        auto r = checkRbTreeHelper(node->right);
-        if (!l.first || !r.first) {
-            // subtree failed - finish early
-            return {false, -1};
-        }
-
-        bool equalBlackHeight = l.second == r.second;
-        if (!equalBlackHeight) {
-            // un-equal black height - finish early
-            MyLog("invalid rb tree - un-equal black height");
-            return {false, -1};
-        }
-
-        int blackHeight = l.second;
-        if (node->colour == BLACK) {
-            blackHeight += 1;
-        }
-
-        return {true, blackHeight};
-    }
-
-    Node* getUncle(Node* node) {
-        Node* parent = node->parent;
-        if (parent == nullptr) return nullptr;
-        Node* grandParent = parent->parent;
-        if (grandParent == nullptr) return nullptr;
-
-        if (grandParent->left == parent) {
-            return grandParent->right;
-        } else if (grandParent->right == parent) {
-            return grandParent->left;
-        } 
-
-        std::runtime_error("getUncle - unreachable path reached"); // never reach here
-        return nullptr;
-    }
-
     bool erase(const K& key) {
         Node* node = find(key);
         if (node == nullptr) {
@@ -286,13 +222,13 @@ public:
             //      In-order successor is guaranteed left-most node in right subtree,
             //      so either a leaf or node with one-child (i.e. always a simpler delete).
             //
-            Node* succ = inorderSuccessor(node);
+            Node* succ = RBTree::inorderSuccessor(node);
             std::swap(node->kv, succ->kv);
             node = succ;
         }
 
         if (node->left) {
-            // left child - directly connect parent and left child
+            // has left child - directly connect parent and left child
             updateParentRef(node, node->left);
             delete node;
             mSize--;
@@ -300,7 +236,7 @@ public:
         }
 
         if (node->right) {
-            // right child - directly connect parent and right child
+            // has right child - directly connect parent and right child
             updateParentRef(node, node->right);
             delete node;
             mSize--;
@@ -308,13 +244,17 @@ public:
         }
         
         if (node->left == nullptr && node->right == nullptr) {
-            // leaf node - just remove it
+            // is leaf node - just remove it
             updateParentRef(node, nullptr);
             delete node;
             return true;
         }
 
         assert(false); // never get here
+    }
+
+    void fixDeletion(Node* x, Node* parent) {
+        // todo
     }
 
     Node* find(const K& key) {
@@ -341,6 +281,72 @@ public:
                 currNode = currNode->right;
             }
         }
+    }
+
+    //
+    // Returns in-order successor of `target`.
+    // If `target` has no in-order successor, nullptr is returned (i.e. if 
+    // `target` is largest node, or `target` is nullptr).
+    //
+    static Node* inorderSuccessor(Node* target) {
+        if (target == nullptr) return nullptr;
+
+        //
+        // Case 1: right subtree exists.
+        // In-order successor is least (furthest left) node in right-subtree.
+        //
+        if (target->right != nullptr) {
+            Node* curr = target->right;
+            while (curr->left != nullptr) {
+                curr = curr->left;
+            }
+            return curr;
+        }
+
+        //
+        // Case 2: no right subtree.
+        // In-order successor is lowest ancestor that is a left child.
+        //
+        Node* curr = target;
+        Node* p = curr->parent;
+        while (p != nullptr && curr == p->right) {
+            curr = p;
+            p = p->parent;
+        }
+
+        return p; // either parent of left child, or nullptr
+    }
+
+    //
+    // Returns in-order predecessor of `node`
+    //
+    static Node* inorderPredecessor(Node* target) {
+        if (target == nullptr) return nullptr;
+
+        //
+        // Case 1: left subtree exists.
+        // In-order predecessor is largest (further right) in left subtree
+        //
+        if (target->left != nullptr) {
+            Node* curr = target->left;
+            while (curr->right) {
+                curr = curr->right;
+            }
+            return curr;
+        }
+
+        //
+        // Case 2: no left subtree.
+        // In-order precedessor is lowest ancestor that is a right child
+        //
+        Node* curr = target;
+        Node* p = curr->parent;
+        while (p != nullptr && p->left == curr) {
+            curr = p;
+            p = curr->parent;
+        }
+
+        return p; // either parent of left child, or nullptr (i.e. no inorder predecessor exists)
     }
 
     void clear() {
@@ -441,36 +447,75 @@ public:
         rotateRightRight(grandParent);
     }
 
-private:
-    //
-    // Returns in-order successor of `node`
-    //
-    Node* inorderSuccessor(Node* target) {
-        // case 1: right subtree exists
-        if (target->right != nullptr) {
-            Node* curr = target->right;
-            while (curr->left != nullptr) {
-                curr = curr->left;
-            }
-            return curr;
-        }
+    Node* getUncle(Node* node) {
+        Node* parent = node->parent;
+        if (parent == nullptr) return nullptr;
+        Node* grandParent = parent->parent;
+        if (grandParent == nullptr) return nullptr;
 
-        // case 2: no right subtree
-        Node* succ = nullptr;
-        Node* curr = root;
-        while (curr != nullptr) {
-            if (target->kv.first < curr->kv.first) {
-                succ = curr;        // this could be successor
-                curr = curr->left;
-            } else if (target->kv.first > curr->kv.first) {
-                curr = curr->right;
-            } else {
-                break;
-            }
-        }
-        return succ;
+        if (grandParent->left == parent) {
+            return grandParent->right;
+        } else if (grandParent->right == parent) {
+            return grandParent->left;
+        } 
+
+        std::runtime_error("getUncle - unreachable path reached"); // never reach here
+        return nullptr;
     }
 
+    bool checkRbTree() {
+        if (this->root == nullptr) {
+            MyLog("null root");
+            return true;
+        }
+        if (this->root->colour != BLACK) {
+            MyLog("invalid rb tree - non-black root");
+            return false;
+        }
+        return checkRbTreeHelper(this->root).first;
+    }
+
+    std::pair<bool, int> checkRbTreeHelper(Node* node) {
+        // nil node
+        if (node == nullptr) {
+            return {true, -1};
+        }
+
+        // check no double red
+        if (node->colour == RED) {
+            bool doubleRed = (node->left && node->left->colour == RED) ||
+                             (node->right && node->right->colour == RED);
+            if (doubleRed) {
+                // double red - finish early
+                MyLog("invalid rb tree - double red");
+                return {false, -1};
+            }
+        }
+
+        // check equal black height
+        auto l = checkRbTreeHelper(node->left);
+        auto r = checkRbTreeHelper(node->right);
+        if (!l.first || !r.first) {
+            // subtree failed - finish early
+            return {false, -1};
+        }
+
+        bool equalBlackHeight = l.second == r.second;
+        if (!equalBlackHeight) {
+            // un-equal black height - finish early
+            MyLog("invalid rb tree - un-equal black height");
+            return {false, -1};
+        }
+
+        int blackHeight = l.second;
+        if (node->colour == BLACK) {
+            blackHeight += 1;
+        }
+
+        return {true, blackHeight};
+    }
+
+private:
     //
     // Updates parent of `oldNode` to point to `newNode` instead
     //
@@ -484,6 +529,10 @@ private:
             parent->left = newNode;
         } else if (parent->right == oldNode) {
             parent->right = newNode;
+        }
+
+        if (newNode != nullptr) {
+            newNode->parent = parent;
         }
     }
 
@@ -541,6 +590,7 @@ template <class K, class V, class Alloc = std::allocator<std::pair<const K, V>>>
 class map {
 private:
     RBTree<K, V>* tree;
+    using Node = RBNode<K, V>;
 
 public:
     class iterator; // forward-declare iterator
@@ -553,6 +603,7 @@ public:
     }
 
     ~map() {
+        // tree free'd automatically
     }
 
     //////////////////////////////////////////////////////
@@ -584,28 +635,37 @@ public:
     // Capacity
     //////////////////////////////////////////////////////
     bool empty() {
+        return tree->size() == 0;
     }
 
     uint32_t size() {
+        return tree->size();
     }
 
     //////////////////////////////////////////////////////
     // Modifiers
     //////////////////////////////////////////////////////
-    void clear();
+    void clear() {
+        tree->clear();
+    }
 
 
-    void insert(std::pair<K, V> kv);
+    void insert(std::pair<K, V> kv) {
+
+    }
 
     template <typename... Args>
     void emplace(Args&&... args);
 
-    iterator erase(iterator pos);
+    iterator erase(iterator pos) {
+        
+    }
 
     //////////////////////////////////////////////////////
     // Lookup
     //////////////////////////////////////////////////////
-    uint32_t count(const K& key) const;
+    uint32_t count(const K& key) const {
+    }
 
     iterator find(const K& key) {}
 
@@ -625,10 +685,48 @@ public:
     // Iterator
     //////////////////////////////////////////////////////
     class iterator {
+    public:
+        Node* node;
 
+        using iterator_category = std::bidirectional_iterator_tag;
+        using value_type        = std::pair<const K, V>;
+        using difference_type   = std::ptrdiff_t;
+        using pointer           = value_type*;
+        using reference         = value_type&;
+
+        // constructors
+        iterator() : node(nullptr) {}
+        iterator(Node* n) : node(n) {}
+
+        // Dereference
+        reference operator*() const { return node->kv; }
+        pointer operator->() const { return &(node->kv); }
+
+        iterator& operator++() { // pre-inc
+            Node* succ = RBTree<K, V>::inorderSuccessor(node);
+            return iterator(succ);
+        }
+
+        iterator operator++(int) { // post-inc
+            iterator tmp = this;
+            --this;
+            return tmp;
+        }
+
+        iterator& operator--() { // pre-dec
+            Node* pre = RBTree<K, V>::inorderPredecessor(node);
+            return iterator(succ);
+        }
+        iterator  operator--(int) { // post-dec
+            iterator tmp = this;
+            --this;
+            return tmp;
+        }
     };
 
-    iterator begin();
+    iterator begin() {
+        return {}
+    }
     iterator end();
 
     //////////////////////////////////////////////////////
