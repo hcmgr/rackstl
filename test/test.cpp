@@ -1072,7 +1072,9 @@ TEST(rb_test, general) {
     //  5(B)
     //      3(R)
     //
-    std::cout << "\n\n\n" << rbTree->toString();
+    ASSERT_TRUE(rbTree->root->kv.first == 5 && rbTree->root->colour == BLACK);
+    ASSERT_TRUE(rbTree->root->left->kv.first == 3 && rbTree->root->left->colour == RED);
+    ASSERT_TRUE(rbTree->root->right->kv.first == 7 && rbTree->root->right->colour == RED);
 
     // recolour - red-uncle
     rbTree->insert({8, 8});
@@ -1082,18 +1084,25 @@ TEST(rb_test, general) {
     //  5(B)
     //      3(B)
     //
-    std::cout << "\n\n\n" << rbTree->toString();
+    ASSERT_TRUE(rbTree->root->kv.first == 5 && rbTree->root->colour == BLACK);
+    ASSERT_TRUE(rbTree->root->left->kv.first == 3 && rbTree->root->left->colour == BLACK);
+    ASSERT_TRUE(rbTree->root->right->kv.first == 7 && rbTree->root->right->colour == BLACK);
+    ASSERT_TRUE(rbTree->root->right->right->kv.first == 8 && rbTree->root->right->right->colour == RED);
 
     // no recolour needed
     rbTree->insert({4, 4});
     //
     //          8(R)
     //      7(B)    
-    //          4(R)
     //  5(B)
+    //          4(R)
     //      3(B)
     //
-    std::cout << "\n\n\n" << rbTree->toString();
+    ASSERT_TRUE(rbTree->root->kv.first == 5 && rbTree->root->colour == BLACK);
+    ASSERT_TRUE(rbTree->root->left->kv.first == 3 && rbTree->root->left->colour == BLACK);
+    ASSERT_TRUE(rbTree->root->right->kv.first == 7 && rbTree->root->right->colour == BLACK);
+    ASSERT_TRUE(rbTree->root->right->right->kv.first == 8 && rbTree->root->right->right->colour == RED);
+    ASSERT_TRUE(rbTree->root->left->right->kv.first == 4 && rbTree->root->left->right->colour == RED);
 
     // reset
     rbTree->clear();
@@ -1103,15 +1112,168 @@ TEST(rb_test, general) {
     //  5(B)
     //      4(R)
     //
-    std::cout << "\n\n\n" << rbTree->toString();
+    ASSERT_TRUE(rbTree->root->kv.first == 5 && rbTree->root->colour == BLACK);
+    ASSERT_TRUE(rbTree->root->left->kv.first == 4 && rbTree->root->left->colour == RED);
 
-    // recolour - black-uncle => left-left rotation
+    // insert 1, then recolour - black-uncle, left-left case
+    rbTree->insert({1,1});
+    //
+    //                              5(R)
+    //  5(B)          ->        4(B)
+    //      4(R)                    1(R)
+    //          3(R)
+    //
+    ASSERT_TRUE(rbTree->root->kv.first == 4 && rbTree->root->colour == BLACK);
+    ASSERT_TRUE(rbTree->root->left->kv.first == 1 && rbTree->root->left->colour == RED);
+    ASSERT_TRUE(rbTree->root->right->kv.first == 5 && rbTree->root->right->colour == RED);
+
+    rbTree->clear();
+    rbTree->insert({5,5});
     rbTree->insert({3,3});
     //
-    //      5(R)
-    //  4(B)
+    //  5(B)
     //      3(R)
     //
-    std::cout << "\n\n\n" << rbTree->toString();
+    ASSERT_TRUE(rbTree->root->kv.first == 5 && rbTree->root->colour == BLACK);
+    ASSERT_TRUE(rbTree->root->left->kv.first == 3 && rbTree->root->left->colour == RED);
+
+    // insert 3, then recolour - black-uncle, left-right case
+    rbTree->insert({4,4});
+    //
+    //                            5(R)
+    //  5(B)            ->    4(B)
+    //          4(R)              3(R)
+    //      3(R)
+    //
+    ASSERT_TRUE(rbTree->root->kv.first == 4 && rbTree->root->colour == BLACK);
+    ASSERT_TRUE(rbTree->root->left->kv.first == 3 && rbTree->root->left->colour == RED);
+    ASSERT_TRUE(rbTree->root->right->kv.first == 5 && rbTree->root->right->colour == RED);
+
+    rbTree->clear();
+    rbTree->insert({5,5});
+    rbTree->insert({6,6});
+    //
+    //      6(R)
+    //  5(B)
+    //
+    ASSERT_TRUE(rbTree->root->kv.first == 5 && rbTree->root->colour == BLACK);
+    ASSERT_TRUE(rbTree->root->right->kv.first == 6 && rbTree->root->right->colour == RED);
+
+    // insert 7, then recolour - black-uncle, right-right case
+    rbTree->insert({7,7});
+    //
+    //          7(R)
+    //      6(R)                    7(R)
+    //  5(B)            ->      6(B)
+    //                              5(R)
+    //
+    ASSERT_TRUE(rbTree->root->kv.first == 6 && rbTree->root->colour == BLACK);
+    ASSERT_TRUE(rbTree->root->left->kv.first == 5 && rbTree->root->left->colour == RED);
+    ASSERT_TRUE(rbTree->root->right->kv.first == 7 && rbTree->root->right->colour == RED);
+
+    rbTree->clear();
+    rbTree->insert({5,5});
+    rbTree->insert({7,7});
+    //
+    //      7(R)
+    //  5(B)
+    //
+    ASSERT_TRUE(rbTree->root->kv.first == 5 && rbTree->root->colour == BLACK);
+    ASSERT_TRUE(rbTree->root->right->kv.first == 7 && rbTree->root->right->colour == RED);
+
+    // insert 6, then recolour - black-uncle, right-left case
+    rbTree->insert({6,6});
+    //
+    //      7(R)
+    //          6(R)              7(R)
+    //  5(B)            ->    6(B)
+    //                            5(R)
+    //
+    ASSERT_TRUE(rbTree->root->kv.first == 6 && rbTree->root->colour == BLACK);
+    ASSERT_TRUE(rbTree->root->left->kv.first == 5 && rbTree->root->left->colour == RED);
+    ASSERT_TRUE(rbTree->root->right->kv.first == 7 && rbTree->root->right->colour == RED);
+}
+
+void insertManual(rack::RBNode<int, int>** node, std::pair<int, int> kv, bool colour) {
+    *node = new rack::RBNode<int, int>(kv, colour);
+}
+
+void freeManual(rack::RBNode<int, int>** node) {
+    delete *node;
+    *node = nullptr;
+}
+
+TEST(rb_test, rb_properties_fine_grain_insert) {
+    //
+    // Here, we verify our rb properties hold with with careful, fine-grain inserts.
+    // Note that manually insert (see insertManual() above) to avoid our colour fixing code,
+    // i.e. we want intentionally bad trees so we can verify property checking.
+    //
+    rack::RBTree<int, int>* rbTree = new rack::RBTree<int, int>();
+    insertManual(&rbTree->root, {5,5}, BLACK);
+    //
+    //  5(B)            (valid)
+    //
+    ASSERT_TRUE(rbTree->checkRbTree());
+
+    insertManual(&rbTree->root->left, {2,2}, RED);
+    //
+    //  5(B)          
+    //      2(R)        (valid)
+    //
+    ASSERT_TRUE(rbTree->checkRbTree());
+
+    insertManual(&rbTree->root->left->left, {1,1}, RED);
+    //
+    //  5(B)
+    //      2(R)        (invalid - double red)
+    //          1(R)
+    //
+    ASSERT_FALSE(rbTree->checkRbTree());
+    freeManual(&rbTree->root->left->left);
+
+    insertManual(&rbTree->root->right, {6,6}, RED);
+    //
+    //      6(R)
+    //  5(B)            (valid)
+    //      2(R)        
+    //
+    insertManual(&rbTree->root->right->right, {7,7}, BLACK);
+    insertManual(&rbTree->root->right->right->right, {8,8}, RED);
+    //
+    //              8(R)
+    //          7(B)
+    //      6(R)
+    //  5(B)            (invalid - un-equal black heights)
+    //      2(R)        
+    //
+    ASSERT_FALSE(rbTree->checkRbTree());
+}
+
+TEST(rb_test, rb_properties_mass_insert) {
+    //
+    // Here, we verify our rb properties hold with mass insertions.
+    //
+
+    rack::RBTree<int, int>* rbTree = new rack::RBTree<int, int>();
+
+    int N = 100;
+    for (int i = 0; i < N; i++) {
+        rbTree->insert({i, i});
+        if (!rbTree->checkRbTree()) {
+            break;
+        }
+    }
+
+    for (int i = 2*N; i >= N; i--) {
+        rbTree->insert({i, i});
+        if (i == 15) {
+            std::cout << "\n\n\n\n" << rbTree->toString();
+        }
+        if (!rbTree->checkRbTree()) {
+            std::cout << "\n\n\n\n" << rbTree->toString();
+            break;
+        }
+    }
 }
 }; // end 'rack'

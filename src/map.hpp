@@ -61,6 +61,11 @@ struct RBNode {
         RBNode* rightArg,
         bool colour)
         : kv(kvArg), parent(parentArg), left(leftArg), right(rightArg), colour(colour) {}
+    
+    RBNode(
+        const std::pair<K, V>& kvArg,
+        bool colour)
+        : kv(kvArg), parent(nullptr), left(nullptr), right(nullptr), colour(colour) {}
 };
 
 template <class K, class V>
@@ -120,6 +125,8 @@ public:
                 break;
             }
         }
+
+        assert(inserted);
 
         //
         // At this point, we've inserted, and currNode points to the newly inserted node.
@@ -197,6 +204,58 @@ public:
         root->colour = BLACK;
     }
 
+    bool checkRbTree() {
+        if (this->root == nullptr) {
+            MyLog("null root");
+            return true;
+        }
+        if (this->root->colour != BLACK) {
+            MyLog("invalid rb tree - non-black root");
+            return false;
+        }
+        return checkRbTreeHelper(this->root).first;
+    }
+
+    std::pair<bool, int> checkRbTreeHelper(Node* node) {
+        // nil node
+        if (node == nullptr) {
+            return {true, -1};
+        }
+
+        // check no double red
+        if (node->colour == RED) {
+            bool doubleRed = (node->left && node->left->colour == RED) ||
+                             (node->right && node->right->colour == RED);
+            if (doubleRed) {
+                // double red - finish early
+                MyLog("invalid rb tree - double red");
+                return {false, -1};
+            }
+        }
+
+        // check equal black height
+        auto l = checkRbTreeHelper(node->left);
+        auto r = checkRbTreeHelper(node->right);
+        if (!l.first || !r.first) {
+            // subtree failed - finish early
+            return {false, -1};
+        }
+
+        bool equalBlackHeight = l.second == r.second;
+        if (!equalBlackHeight) {
+            // un-equal black height - finish early
+            MyLog("invalid rb tree - un-equal black height");
+            return {false, -1};
+        }
+
+        int blackHeight = l.second;
+        if (node->colour == BLACK) {
+            blackHeight += 1;
+        }
+
+        return {true, blackHeight};
+    }
+
     Node* getUncle(Node* node) {
         Node* parent = node->parent;
         if (parent == nullptr) return nullptr;
@@ -209,7 +268,7 @@ public:
             return grandParent->left;
         } 
 
-        std::runtime_error("getUncle - unreachable path reached"); // never go here
+        std::runtime_error("getUncle - unreachable path reached"); // never reach here
         return nullptr;
     }
 
@@ -322,51 +381,41 @@ public:
     // Rotations
     //////////////////////////////////////////////////////
 
-    // Rotates tree rooted at `root` left
     void rotateLeft(Node* root) {
-        if (root == nullptr) return;
+        if (!root || !root->right) return;
 
         Node* right = root->right;
-        if (right == nullptr) return;
-
-        // root's right becomes right's left
         root->right = right->left;
+        if (right->left) {
+            right->left->parent = root;
+        }
 
-        // right's left becomes root
-        right->left = root;
-
+        right->parent = root->parent;
         updateParentRef(root, right);
 
-        // update parents
-        right->parent = root->parent;
+        right->left = root;
         root->parent = right;
 
-        // update global root, if necessary
         if (this->root == root) {
             this->root = right;
         }
     }
 
-    // Rotates tree rooted at `root` right
     void rotateRight(Node* root) {
-        if (root == nullptr) return;
+        if (!root || !root->left) return;
 
         Node* left = root->left;
-        if (left == nullptr) return;
-
-        // root's left becomes left's right
         root->left = left->right;
+        if (left->right) {
+            left->right->parent = root;
+        }
 
-        // left's right becomes root
-        left->right = root;
-
+        left->parent = root->parent;
         updateParentRef(root, left);
 
-        // update parents
-        left->parent = root->parent;
+        left->right = root;
         root->parent = left;
 
-        // update global root, if necessary
         if (this->root == root) {
             this->root = left;
         }
@@ -466,7 +515,7 @@ private:
         std::string colourCode = node->colour == RED ? "R" : "B";
 
         // current node (indented according to `depth`)
-        oss << std::string(depth * 4, ' ')   // 4 spaces per depth level
+        oss << std::string(depth * 8, ' ')   // 4 spaces per depth level
             << "(" << node->kv.first << ":" << colourCode << ")\n";
 
         // left subtree

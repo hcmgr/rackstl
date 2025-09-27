@@ -1,5 +1,15 @@
 #include <memory>
+#include <iostream>
 #pragma once
+
+template <typename... Args>
+inline void MyLogImpl(const char* func, Args&&... args) {
+    std::cout << "[" << func << "] ";
+    (std::cout << ... << args) << "\n";
+}
+
+#define MyLog(...) MyLogImpl(__func__, __VA_ARGS__)
+
 namespace utils {
     template <typename Alloc, typename T, typename... Args>
     void allocConstruct(Alloc& alloc, T* p, Args&&... args) {

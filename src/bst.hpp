@@ -193,51 +193,41 @@ public:
     // Rotations
     //////////////////////////////////////////////////////
 
-    // Rotates tree rooted at `root` left
-    void rotateLeft(Node* root) {
-        if (root == nullptr) return;
+        void rotateLeft(Node* root) {
+        if (!root || !root->right) return;
 
         Node* right = root->right;
-        if (right == nullptr) return;
-
-        // root's right becomes right's left
         root->right = right->left;
+        if (right->left) {
+            right->left->parent = root;
+        }
 
-        // right's left becomes root
-        right->left = root;
-
+        right->parent = root->parent;
         updateParentRef(root, right);
 
-        // update parents
-        right->parent = root->parent;
+        right->left = root;
         root->parent = right;
 
-        // update global root, if necessary
         if (this->root == root) {
             this->root = right;
         }
     }
 
-    // Rotates tree rooted at `root` right
     void rotateRight(Node* root) {
-        if (root == nullptr) return;
+        if (!root || !root->left) return;
 
         Node* left = root->left;
-        if (left == nullptr) return;
-
-        // root's left becomes left's right
         root->left = left->right;
+        if (left->right) {
+            left->right->parent = root;
+        }
 
-        // left's right becomes root
-        left->right = root;
-
+        left->parent = root->parent;
         updateParentRef(root, left);
 
-        // update parents
-        left->parent = root->parent;
+        left->right = root;
         root->parent = left;
 
-        // update global root, if necessary
         if (this->root == root) {
             this->root = left;
         }
