@@ -727,7 +727,9 @@ public:
     iterator begin() {
         return {}
     }
-    iterator end();
+    iterator end() {
+
+    }
 
     //////////////////////////////////////////////////////
     // Helpers
