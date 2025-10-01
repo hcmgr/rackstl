@@ -4,8 +4,9 @@
 
 #include "vector.hpp"
 
-#define BLACK   0
-#define RED     1
+#define BLACK       0
+#define RED         1
+#define SENTINEL    2
 
 namespace rack{
 
@@ -52,19 +53,19 @@ struct RBNode {
     RBNode* parent;
     RBNode* left;
     RBNode* right;
-    bool colour;
+    char colour;
 
     RBNode(
         const std::pair<K, V>& kvArg, 
         RBNode* parentArg, 
         RBNode* leftArg, 
         RBNode* rightArg,
-        bool colour)
+        char colour)
         : kv(kvArg), parent(parentArg), left(leftArg), right(rightArg), colour(colour) {}
     
     RBNode(
         const std::pair<K, V>& kvArg,
-        bool colour)
+        char colour)
         : kv(kvArg), parent(nullptr), left(nullptr), right(nullptr), colour(colour) {}
 };
 
@@ -74,10 +75,11 @@ public:
     using Node = RBNode<K, V>;
 
     Node* root;
+    Node* sentinel;
     uint32_t mSize;
 
     RBTree() 
-        : root(nullptr), mSize(0) {}
+        : root(nullptr), sentinel(nullptr), mSize(0) {}
     
     ~RBTree() {
         clear();
@@ -86,11 +88,12 @@ public:
     // 
     // Returns pointer to newly inserted node, or existing node if it already exists.
     //
-    Node* insert(std::pair<K, V> kv) {
+    std::pair<Node*, bool> insert(std::pair<K, V> kv) {
         if (mSize == 0) {
             root = new Node(kv, nullptr, nullptr, nullptr, BLACK);
             mSize++;
-            return root;
+            updateSentinel();
+            return {root, true};
         }
 
         //
@@ -103,7 +106,7 @@ public:
         while (true) {
             if (kv.first == currNode->kv.first) {
                 // found key
-                return currNode;
+                return {root, false};
             }
 
             if (kv.first < currNode->kv.first) {
@@ -138,7 +141,19 @@ public:
         //
         fixInsertion(currNode);
 
-        return currNode;
+        updateSentinel();
+        return {currNode, true};
+    }
+
+    void updateSentinel() {
+        if (sentinel == nullptr) {
+            sentinel = new Node({}, SENTINEL);
+        }
+        sentinel->kv = {-69,-69};
+        sentinel->parent = root;
+        sentinel->left = findMin();
+        sentinel->right = findMax();
+        root->parent = sentinel;
     }
 
     //
@@ -283,6 +298,24 @@ public:
         }
     }
 
+    Node* findMin() {
+        if (mSize == 0) return nullptr;
+        Node* curr = root;
+        while (curr->left) {
+            curr = curr->left;
+        }
+        return curr;
+    }
+
+    Node* findMax() {
+        if (mSize == 0) return nullptr;
+        Node* curr = root;
+        while (curr->right) {
+            curr = curr->right;
+        }
+        return curr;
+    }
+
     //
     // Returns in-order successor of `target`.
     // If `target` has no in-order successor, nullptr is returned (i.e. if 
@@ -314,7 +347,11 @@ public:
             p = p->parent;
         }
 
-        return p; // either parent of left child, or nullptr
+        if (curr->right != p) {
+            curr = p;
+        }
+
+        return curr;
     }
 
     //
@@ -346,7 +383,11 @@ public:
             p = curr->parent;
         }
 
-        return p; // either parent of left child, or nullptr (i.e. no inorder predecessor exists)
+        if (curr->left != p) {
+            curr = p;
+        }
+
+        return curr;
     }
 
     void clear() {
@@ -359,6 +400,10 @@ public:
         clearPostOrder(root);
         root = nullptr;
         mSize = 0;
+        if (sentinel) {
+            delete sentinel;
+            sentinel = nullptr;
+        }
     }
 
     uint32_t size() {
@@ -609,10 +654,11 @@ public:
     //////////////////////////////////////////////////////
     // Accessors
     //////////////////////////////////////////////////////
+
     V& at(const K& key) {
         auto it = find(key);
         if (it == end()) {
-            throw std::out_of_range("Key not in map");
+            throw std::out_of_range("key not in map");
         }
         return it->second;
     }
@@ -649,37 +695,34 @@ public:
         tree->clear();
     }
 
-
-    void insert(std::pair<K, V> kv) {
-
+    std::pair<iterator, bool> insert(std::pair<K, V> kv) {
+        return emplace(kv);
     }
 
     template <typename... Args>
-    void emplace(Args&&... args);
-
-    iterator erase(iterator pos) {
-        
+    std::pair<iterator, bool> emplace(Args&&... args) {
+        std::pair<K, V> kv(std::forward<Args>(args)...);
+        auto p = tree->insert(std::move(kv));
+        return std::make_pair<>(iterator(p.first), p.second);
     }
+
+    uint32_t erase(const K& key) { }
+    uint32_t erase(iterator pos) { }
 
     //////////////////////////////////////////////////////
     // Lookup
     //////////////////////////////////////////////////////
     uint32_t count(const K& key) const {
+        return tree->find(key) == nullptr ? 0 : 1;
     }
 
-    iterator find(const K& key) {}
+    iterator find(const K& key) {
+        return iterator(tree->find(key));
+    }
 
-    bool contains(const K& key) {}
-
-    iterator lower_bound(const K& key);
-    iterator upper_bound(const K& key);
-
-    //////////////////////////////////////////////////////
-    // Observors
-    //////////////////////////////////////////////////////
-
-    // key_comp
-    // value_comp
+    bool contains(const K& key) {
+        return tree->find(key) != nullptr;
+    }
 
     //////////////////////////////////////////////////////
     // Iterator
@@ -689,7 +732,7 @@ public:
         Node* node;
 
         using iterator_category = std::bidirectional_iterator_tag;
-        using value_type        = std::pair<const K, V>;
+        using value_type        = std::pair<K, V>;
         using difference_type   = std::ptrdiff_t;
         using pointer           = value_type*;
         using reference         = value_type&;
@@ -697,43 +740,73 @@ public:
         // constructors
         iterator() : node(nullptr) {}
         iterator(Node* n) : node(n) {}
+        iterator(const iterator& other) {
+            node = other.node;
+        }
 
         // Dereference
         reference operator*() const { return node->kv; }
         pointer operator->() const { return &(node->kv); }
 
+        // Inc
         iterator& operator++() { // pre-inc
-            Node* succ = RBTree<K, V>::inorderSuccessor(node);
-            return iterator(succ);
+            node = RBTree<K, V>::inorderSuccessor(node);
+            return *this;
         }
-
         iterator operator++(int) { // post-inc
-            iterator tmp = this;
-            --this;
+            iterator tmp = *this;
+            node = RBTree<K, V>::inorderSuccessor(node);
+            return tmp;
+        }
+        iterator& operator--() { // pre-dec
+            node = RBTree<K, V>::inorderPredecessor(node);
+            return *this;
+        }
+        iterator operator--(int) { // post-dec
+            iterator tmp = *this;
+            node = RBTree<K, V>::inorderPredecessor(node);
             return tmp;
         }
 
-        iterator& operator--() { // pre-dec
-            Node* pre = RBTree<K, V>::inorderPredecessor(node);
-            return iterator(succ);
+        // Comparison
+        bool operator==(const iterator& other) const { 
+            return node == other.node;
         }
-        iterator  operator--(int) { // post-dec
-            iterator tmp = this;
-            --this;
-            return tmp;
+        bool operator!=(const iterator& other) const { 
+            return !(*this == other);
+        }
+        bool operator<(const iterator& other) const { 
+            if (node->colour == SENTINEL) return false;
+            if (other.node->colour == SENTINEL) return true;
+            return node->kv.first < other.node->kv.first;
+        }
+        bool operator<=(const iterator& other) const { 
+            return node->kv.first <= other.node->kv.first;
+        }
+        bool operator>(const iterator& other) const { 
+            if (node->colour == SENTINEL) return true;
+            if (other.node->colour == SENTINEL) return false;
+            return !(*this <= other);
+        }
+        bool operator>=(const iterator& other) const { 
+            return !(*this < other);
         }
     };
 
     iterator begin() {
-        return {}
+        return iterator(tree->sentinel->left);
     }
+
     iterator end() {
-
+        return iterator(tree->sentinel);
     }
 
     //////////////////////////////////////////////////////
-    // Helpers
+    // Display
     //////////////////////////////////////////////////////
+    std::string toString() {
+        return tree->toString();
+    }
 };
 
 }; // end of 'rack'

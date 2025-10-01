@@ -9,6 +9,7 @@
 #include <iostream>
 #include <string>
 #include <unordered_map>
+#include <map>
 #include <thread>
 
 #include "vector.hpp"
@@ -1061,84 +1062,6 @@ TEST(bst_test, comboRotations) {
     ASSERT_EQ(tree->root->right->right->kv.first, 8);
 }
 
-TEST(bst_test, in_order_successor) {
-    using Node = rack::BSTNode<int, int>;
-    using BSTTree = rack::BSTTree<int, int>;
-    rack::BSTTree<int, int>* tree = new rack::BSTTree<int, int>();
-    Node* node;
-
-    tree->insert({3,3});
-    tree->insert({2,2});
-    //
-    //  3   
-    //      2
-    //
-    node = BSTTree::inorderSuccessor(tree->root);
-    ASSERT_EQ(node, nullptr);
-    node = BSTTree::inorderSuccessor(tree->root->left);
-    ASSERT_EQ(node->kv.first, 3);
-
-    tree->insert({1,1});
-    tree->insert({5,5});
-    tree->insert({4,4});
-    //  
-    //      5
-    //          4
-    //  3
-    //      2
-    //          1
-    //
-    node = BSTTree::inorderSuccessor(tree->root);
-    ASSERT_EQ(node->kv.first, 4);
-    node = BSTTree::inorderSuccessor(tree->root->left);
-    ASSERT_EQ(node->kv.first, 3);
-    node = BSTTree::inorderSuccessor(tree->root->left->left);
-    ASSERT_EQ(node->kv.first, 2);
-    node = BSTTree::inorderSuccessor(tree->root->right);
-    ASSERT_EQ(node, nullptr);
-    node = BSTTree::inorderSuccessor(tree->root->right->left);
-    ASSERT_EQ(node->kv.first, 5);
-}
-
-TEST(bst_test, in_order_predecessor) {
-    using Node = rack::BSTNode<int, int>;
-    using BSTTree = rack::BSTTree<int, int>;
-    rack::BSTTree<int, int>* tree = new rack::BSTTree<int, int>();
-    Node* node;
-
-    tree->insert({3,3});
-    tree->insert({4,4});
-    //
-    //      4
-    //  3   
-    //
-    node = BSTTree::inorderPredecessor(tree->root);
-    ASSERT_EQ(node, nullptr);
-    node = BSTTree::inorderPredecessor(tree->root->right);
-    ASSERT_EQ(node->kv.first, 3);
-
-    tree->insert({5,5});
-    tree->insert({1,1});
-    tree->insert({2,2});
-    //  
-    //          5
-    //      4
-    //  3
-    //          2
-    //      1
-    //
-    node = BSTTree::inorderPredecessor(tree->root);
-    ASSERT_EQ(node->kv.first, 2);
-    node = BSTTree::inorderPredecessor(tree->root->left);
-    ASSERT_EQ(node, nullptr);
-    node = BSTTree::inorderPredecessor(tree->root->left->right);
-    ASSERT_EQ(node->kv.first, 1);
-    node = BSTTree::inorderPredecessor(tree->root->right);
-    ASSERT_EQ(node->kv.first, 3);
-    node = BSTTree::inorderPredecessor(tree->root->right->right);
-    ASSERT_EQ(node->kv.first, 4);
-}
-
 /////////////////////////////////////////
 // RBTree tests
 /////////////////////////////////////////
@@ -1150,6 +1073,7 @@ TEST(rb_test, general) {
     rbTree->insert({5, 5});
     rbTree->insert({7, 7});
     rbTree->insert({3, 3});
+    
     //  
     //      7(R)
     //  5(B)
@@ -1161,6 +1085,7 @@ TEST(rb_test, general) {
 
     // recolour - red-uncle
     rbTree->insert({8, 8});
+    
     //
     //          8(R)
     //      7(B)    
@@ -1174,6 +1099,7 @@ TEST(rb_test, general) {
 
     // no recolour needed
     rbTree->insert({4, 4});
+    
     //
     //          8(R)
     //      7(B)    
@@ -1186,6 +1112,8 @@ TEST(rb_test, general) {
     ASSERT_TRUE(rbTree->root->right->kv.first == 7 && rbTree->root->right->colour == BLACK);
     ASSERT_TRUE(rbTree->root->right->right->kv.first == 8 && rbTree->root->right->right->colour == RED);
     ASSERT_TRUE(rbTree->root->left->right->kv.first == 4 && rbTree->root->left->right->colour == RED);
+    ASSERT_EQ(rbTree->findMin()->kv.first, 3);
+    ASSERT_EQ(rbTree->findMax()->kv.first, 8);
 
     // reset
     rbTree->clear();
@@ -1275,6 +1203,8 @@ TEST(rb_test, general) {
     ASSERT_TRUE(rbTree->root->kv.first == 6 && rbTree->root->colour == BLACK);
     ASSERT_TRUE(rbTree->root->left->kv.first == 5 && rbTree->root->left->colour == RED);
     ASSERT_TRUE(rbTree->root->right->kv.first == 7 && rbTree->root->right->colour == RED);
+    ASSERT_EQ(rbTree->findMin()->kv.first, 5);
+    ASSERT_EQ(rbTree->findMax()->kv.first, 7);
 }
 
 void insertManual(rack::RBNode<int, int>** node, std::pair<int, int> kv, bool colour) {
@@ -1361,5 +1291,121 @@ TEST(rb_test, rb_properties_mass_insert) {
     }
 }
 
+TEST(rb_test, in_order_successor) {
+    using Node = rack::RBNode<int, int>;
+    using RBTree = rack::RBTree<int, int>;
+    rack::RBTree<int, int>* tree = new rack::RBTree<int, int>();
+    Node* node;
+
+    tree->insert({3,3});
+    tree->insert({2,2});
+    //
+    //  3   
+    //      2
+    //
+    node = RBTree::inorderSuccessor(tree->root);
+    ASSERT_EQ(node, tree->sentinel);
+    node = RBTree::inorderSuccessor(tree->root->left);
+    ASSERT_EQ(node->kv.first, 3);
+
+    tree->insert({1,1});
+    tree->insert({5,5});
+    tree->insert({4,4});
+    //  
+    //                  5:R
+    //          4:B
+    //                  3:R
+    //  2:B
+    //          1:B
+    //
+    node = RBTree::inorderSuccessor(tree->root);
+    ASSERT_EQ(node->kv.first, 3);
+    node = RBTree::inorderSuccessor(tree->root->left);
+    ASSERT_EQ(node->kv.first, 2);
+    node = RBTree::inorderSuccessor(tree->root->right);
+    ASSERT_EQ(node->kv.first, 5);
+    node = RBTree::inorderSuccessor(tree->root->right->left);
+    ASSERT_EQ(node->kv.first, 4);
+    node = RBTree::inorderSuccessor(tree->root->right->right);
+    ASSERT_EQ(node, tree->sentinel);
+}
+
+TEST(rb_test, in_order_predecessor) {
+    using Node = rack::RBNode<int, int>;
+    using RBTree = rack::RBTree<int, int>;
+    rack::RBTree<int, int>* tree = new rack::RBTree<int, int>();
+    Node* node;
+
+    tree->insert({3,3});
+    tree->insert({4,4});
+    //
+    //      4
+    //  3   
+    //
+    node = RBTree::inorderPredecessor(tree->root);
+    ASSERT_EQ(node, tree->sentinel);
+    node = RBTree::inorderPredecessor(tree->root->right);
+    ASSERT_EQ(node->kv.first, 3);
+
+    tree->insert({5,5});
+    tree->insert({1,1});
+    tree->insert({2,2});
+    //  
+    //          5:B
+    //  4:B
+    //                  3:R
+    //          2:B 
+    //                  1:R
+    //
+    node = RBTree::inorderPredecessor(tree->root);
+    ASSERT_EQ(node->kv.first, 3);
+    node = RBTree::inorderPredecessor(tree->root->left);
+    ASSERT_EQ(node->kv.first, 1);
+    node = RBTree::inorderPredecessor(tree->root->left->left);
+    ASSERT_EQ(node, tree->sentinel);
+    node = RBTree::inorderPredecessor(tree->root->left->right);
+    ASSERT_EQ(node->kv.first, 2);
+    node = RBTree::inorderPredecessor(tree->root->right);
+    ASSERT_EQ(node->kv.first, 4);
+}
+
+TEST(rb_test, min_max_sentinel) {
+    rack::RBTree<int, int>* rbTree = new rack::RBTree<int, int>();
+
+    int N = 10;
+    for (int i = 0; i < N; i++) {
+        rbTree->insert({i, i});
+    }
+    ASSERT_EQ(rbTree->findMin()->kv.first, 0);
+    ASSERT_EQ(rbTree->findMax()->kv.first, N - 1);
+    ASSERT_EQ(rbTree->root->parent, rbTree->sentinel);
+    ASSERT_EQ(rbTree->sentinel->parent, rbTree->root);
+    ASSERT_EQ(rbTree->sentinel->left, rbTree->findMin());
+    ASSERT_EQ(rbTree->sentinel->right, rbTree->findMax());
+}
+
+/////////////////////////////////////////
+// map tests
+/////////////////////////////////////////
+
+TEST(map_test, general) {
+    map<int, int> m;
+
+    int N = 100;
+    for (int i = 0; i < N; i++) {
+        m.insert({i, 2*i});
+    }
+
+    ASSERT_TRUE(m.begin() != m.end());
+    ASSERT_TRUE(m.begin() < m.end());
+
+    auto it = m.begin();
+    for (int i = 0; i < N; i++) {
+        ASSERT_EQ(it->first, i);
+        ASSERT_EQ(it->second, 2*i);
+        it++;
+    }
+    ASSERT_EQ(it, m.end());
+}
 
 }; // end 'rack'

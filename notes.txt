@@ -1,11 +1,10 @@
 TODO
     - map
-        - update map to just copy BST
-        - implement insert and erase with colouring steps
-        - test RB colouring triggers
-        - implement map using RBTree
-        - bench map 
-            - maybe even bench RBTree vs BSTTree versions of map
+        - fix inordersucc and inorderpre rb tests
+        - test map iterate works
+        - bench map
+        - maybe: test map with non-standard type, so have to pass my own comparators in
+        - maybe: map erase
     - priority_queue
     - unordered_map
         - reserve
@@ -16,11 +15,6 @@ TODO
     - deque
         - deque_benchSort() shows a bug with deque
         - fix can't use private variables in deque UT
-    - vector
-        - swap to use std::allocator, rather than ::operator new and placement new
-        - rest of functions
-        - test them
-    - rest of shared_ptr
     - queue
         - just use deque
     - add examples of using implementations
