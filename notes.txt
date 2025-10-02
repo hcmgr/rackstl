@@ -1,10 +1,9 @@
 TODO
     - map
-        - rb fixDeletion() 
-        - test map iterate works
         - bench map
-        - maybe: test map with non-standard type, so have to pass my own comparators in
-        - maybe: map erase
+        - future:
+            - test map with non-standard type, so have to pass my own comparators in
+            - erase (fixDeletion in rbTree, then can use in map)
     - priority_queue
     - unordered_map
         - reserve

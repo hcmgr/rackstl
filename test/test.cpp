@@ -1062,9 +1062,9 @@ TEST(bst_test, comboRotations) {
     ASSERT_EQ(tree->root->right->right->kv.first, 8);
 }
 
-// /////////////////////////////////////////
-// // RBTree tests
-// /////////////////////////////////////////
+/////////////////////////////////////////
+// RBTree tests
+/////////////////////////////////////////
 
 TEST(rb_test, general) {
     rack::RBTree<int, int>* rbTree = new rack::RBTree<int, int>();
@@ -1388,6 +1388,35 @@ TEST(rb_test, min_max_sentinel) {
 // map tests
 /////////////////////////////////////////
 
+TEST(map_test, basic_operations) {
+    map<int, std::string> m;
+
+    ASSERT_TRUE(m.empty());
+    ASSERT_EQ(m.size(), 0);
+
+    // insert
+    m.insert({1, "one"});
+    m.insert({2, "two"});
+    ASSERT_FALSE(m.empty());
+    ASSERT_EQ(m.size(), 2);
+
+    // operator[]
+    m[3] = "three";
+
+    ASSERT_EQ(m.size(), 3);
+    ASSERT_EQ(m[3], "three");
+
+    // find
+    auto it = m.find(2);
+    ASSERT_NE(it, m.end());
+    ASSERT_EQ(it->second, "two");
+
+    // clear
+    m.clear();
+    ASSERT_TRUE(m.empty());
+    ASSERT_EQ(m.size(), 0);
+}
+
 TEST(map_test, iterate) {
     map<int, int> m;
     ASSERT_EQ(m.begin(), m.end());
@@ -1431,5 +1460,4 @@ TEST(map_test, iterate) {
     ASSERT_TRUE(it1 < m.end());
     ASSERT_FALSE(m.end() < it1);
 }
-
 }; // end 'rack'

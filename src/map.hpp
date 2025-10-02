@@ -108,7 +108,7 @@ public:
         while (true) {
             if (kv.first == currNode->kv.first) {
                 // found key
-                return {root, false};
+                return {currNode, false};
             }
 
             if (kv.first < currNode->kv.first) {
@@ -638,11 +638,10 @@ private:
 
 template <class K, class V, class Alloc = std::allocator<std::pair<const K, V>>>
 class map {
-private:
+public:
     RBTree<K, V>* tree;
     using Node = RBNode<K, V>;
 
-public:
     class iterator; // forward-declare iterator
 
     //////////////////////////////////////////////////////
@@ -673,12 +672,12 @@ public:
     // already exist.
     //
     V& operator[](const K& key) {
-        auto [it, _] = insert({key, V{}});
+        auto [it, inserted] = emplace(std::make_pair(std::move(key), V{}));
         return it->second;
     }
 
     V& operator[](K&& key) {
-        auto [it, _] = insert({std::move(key), V{}});  
+        auto [it, inserted] = emplace(std::make_pair(std::move(key), V{}));
         return it->second;
     }
 
@@ -708,7 +707,7 @@ public:
     std::pair<iterator, bool> emplace(Args&&... args) {
         std::pair<K, V> kv(std::forward<Args>(args)...);
         auto p = tree->insert(std::move(kv));
-        return std::make_pair<>(iterator(p.first), p.second);
+        return std::make_pair(iterator(p.first), p.second);
     }
 
     uint32_t erase(const K& key) { }
