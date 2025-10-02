@@ -79,7 +79,9 @@ public:
     uint32_t mSize;
 
     RBTree() 
-        : root(nullptr), sentinel(nullptr), mSize(0) {}
+        : root(nullptr), mSize(0) {
+            sentinel = new Node({}, SENTINEL);
+        }
     
     ~RBTree() {
         clear();
@@ -149,7 +151,6 @@ public:
         if (sentinel == nullptr) {
             sentinel = new Node({}, SENTINEL);
         }
-        sentinel->kv = {-69,-69};
         sentinel->parent = root;
         sentinel->left = findMin();
         sentinel->right = findMax();
@@ -268,10 +269,6 @@ public:
         assert(false); // never get here
     }
 
-    void fixDeletion(Node* x, Node* parent) {
-        // todo
-    }
-
     Node* find(const K& key) {
         if (mSize == 0) {
             return nullptr;
@@ -360,9 +357,13 @@ public:
     static Node* inorderPredecessor(Node* target) {
         if (target == nullptr) return nullptr;
 
+        if (RBTree::isSentinel(target)) {
+            return target->right; // max node
+        }
+
         //
         // Case 1: left subtree exists.
-        // In-order predecessor is largest (further right) in left subtree
+        // In-order predecessor is largest (furthest right) in left subtree
         //
         if (target->left != nullptr) {
             Node* curr = target->left;
@@ -388,6 +389,10 @@ public:
         }
 
         return curr;
+    }
+
+    static bool isSentinel(Node* node) {
+        return node->colour == SENTINEL && node->parent && node->parent->parent == node;
     }
 
     void clear() {
@@ -794,6 +799,9 @@ public:
     };
 
     iterator begin() {
+        if (tree->sentinel->left == nullptr) {
+            return iterator(tree->sentinel);
+        }
         return iterator(tree->sentinel->left);
     }
 

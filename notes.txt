@@ -1,6 +1,6 @@
 TODO
     - map
-        - fix inordersucc and inorderpre rb tests
+        - rb fixDeletion() 
         - test map iterate works
         - bench map
         - maybe: test map with non-standard type, so have to pass my own comparators in

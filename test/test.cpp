@@ -1062,9 +1062,9 @@ TEST(bst_test, comboRotations) {
     ASSERT_EQ(tree->root->right->right->kv.first, 8);
 }
 
-/////////////////////////////////////////
-// RBTree tests
-/////////////////////////////////////////
+// /////////////////////////////////////////
+// // RBTree tests
+// /////////////////////////////////////////
 
 TEST(rb_test, general) {
     rack::RBTree<int, int>* rbTree = new rack::RBTree<int, int>();
@@ -1388,17 +1388,19 @@ TEST(rb_test, min_max_sentinel) {
 // map tests
 /////////////////////////////////////////
 
-TEST(map_test, general) {
+TEST(map_test, iterate) {
     map<int, int> m;
+    ASSERT_EQ(m.begin(), m.end());
 
-    int N = 100;
+    int N = 20;
     for (int i = 0; i < N; i++) {
         m.insert({i, 2*i});
     }
 
     ASSERT_TRUE(m.begin() != m.end());
     ASSERT_TRUE(m.begin() < m.end());
-
+    
+    // forward iteration
     auto it = m.begin();
     for (int i = 0; i < N; i++) {
         ASSERT_EQ(it->first, i);
@@ -1406,6 +1408,28 @@ TEST(map_test, general) {
         it++;
     }
     ASSERT_EQ(it, m.end());
+
+    // backward iteration from end()
+    it = m.end();
+    for (int i = N - 1; i >= 0; i--) {
+        --it;
+        ASSERT_EQ(it->first, i);
+        ASSERT_EQ(it->second, 2*i);
+    }
+    ASSERT_EQ(it, m.begin());
+
+    // iterator equality checks
+    auto it1 = m.begin();
+    auto it2 = m.begin();
+    ASSERT_TRUE(it1 == it2);
+    ++it2;
+    ASSERT_TRUE(it1 != it2);
+
+    // ordering checks
+    ASSERT_TRUE(it1 < it2);
+    ASSERT_TRUE(it2 > it1);
+    ASSERT_TRUE(it1 < m.end());
+    ASSERT_FALSE(m.end() < it1);
 }
 
 }; // end 'rack'
