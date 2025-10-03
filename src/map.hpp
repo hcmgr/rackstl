@@ -614,7 +614,7 @@ private:
         std::string colourCode = node->colour == RED ? "R" : "B";
 
         // current node (indented according to `depth`)
-        oss << std::string(depth * 8, ' ')   // 4 spaces per depth level
+        oss << std::string(depth * 8, ' ')   // 8 spaces per depth level
             << "(" << node->kv.first << ":" << colourCode << ")\n";
 
         // left subtree

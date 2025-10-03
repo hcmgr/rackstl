@@ -20,6 +20,7 @@
 #include "unordered_map.hpp"
 #include "map.hpp"
 #include "bst.hpp"
+#include "priority_queue.hpp"
 
 //
 // Test class. Used to test 'custom object' behaviour of our data structures. 
@@ -1460,4 +1461,27 @@ TEST(map_test, iterate) {
     ASSERT_TRUE(it1 < m.end());
     ASSERT_FALSE(m.end() < it1);
 }
+
+/////////////////////////////////////////
+// priority_queue tests
+/////////////////////////////////////////
+
+TEST(priority_queue_test, general) {
+    priority_queue<int> pq;
+    pq.push(0);
+    std::cout << pq.toString() << "\n\n\n";
+    pq.push(1);
+    std::cout << pq.toString() << "\n\n\n";
+    pq.push(2);
+    std::cout << pq.toString() << "\n\n\n";
+    pq.push(3);
+    std::cout << pq.toString() << "\n\n\n";
+    pq.push(4);
+    std::cout << pq.toString() << "\n\n\n";
+    pq.push(5);
+    std::cout << pq.toString() << "\n\n\n";
+    pq.push(6);
+    std::cout << pq.toString() << "\n\n\n";
+}
+
 }; // end 'rack'

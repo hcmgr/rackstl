@@ -1,10 +1,15 @@
 #include <algorithm>
 #include <random>
 
+#include <vector>
+#include <deque>
+#include <map>
+
 #include "vector.hpp"
 #include "shared_ptr.hpp"
 #include "unique_ptr.hpp"
 #include "deque.hpp"
+#include "map.hpp"
 
 struct MyClass {
     int val;
@@ -405,36 +410,184 @@ void deque_benchRandomAccess() {
     std::cout << "rack::deque random access time: " << rackDuration << " us\n";
 }
 
+void map_benchInsert() {
+    const int N = 100'000;
+
+    //
+    // Benchmark std::map
+    //
+    {
+        std::map<int, int> stdMap;
+
+        auto start = std::chrono::high_resolution_clock::now();
+
+        for (int i = 0; i < N; ++i) {
+            stdMap.insert({i, i * 2});
+        }
+
+        auto end = std::chrono::high_resolution_clock::now();
+        std::chrono::duration<double> elapsed = end - start;
+        std::cout << "std::map insert " << N << " elements: "
+                  << elapsed.count() << " seconds\n";
+    }
+
+    //
+    // Benchmark rack::map
+    //
+    {
+        rack::map<int, int> rackMap;
+
+        auto start = std::chrono::high_resolution_clock::now();
+
+        for (int i = 0; i < N; ++i) {
+            rackMap.insert({i, i * 2});
+        }
+
+        auto end = std::chrono::high_resolution_clock::now();
+        std::chrono::duration<double> elapsed = end - start;
+        std::cout << "rack::map insert " << N << " elements: "
+                  << elapsed.count() << " seconds\n";
+    }
+}
+
+void map_benchIterate() {
+    const int N = 1'000'000;
+
+    // helper lambda: fill a map
+    auto fillMap = [N](auto& m) {
+        for (int i = 0; i < N; ++i)
+            m.insert({i, i});
+    };
+
+    // helper lambda: timed iteration
+    auto timedIterate = [](auto& m) {
+        volatile long long sum = 0; // volatile prevents optimizing away
+        auto start = std::chrono::high_resolution_clock::now();
+        for (auto it = m.begin(); it != m.end(); ++it)
+            sum += it->second;
+        auto end = std::chrono::high_resolution_clock::now();
+        return std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+    };
+
+    //
+    // std::map
+    //
+    std::map<int, int> stdMap;
+    fillMap(stdMap);
+    auto stdDuration = timedIterate(stdMap);
+    std::cout << "std::map iteration time:  " << stdDuration << " ms\n";
+
+    //
+    // rack::map
+    //
+    rack::map<int, int> rackMap;
+    fillMap(rackMap);
+    auto rackDuration = timedIterate(rackMap);
+    std::cout << "rack::map iteration time: " << rackDuration << " ms\n";
+}
+
+void map_benchLookup() {
+    const int N = 500'000;
+
+    std::vector<int> keys(N);
+    for (int i = 0; i < N; ++i) keys[i] = i;
+
+    auto timedLookup = [&](auto& m) {
+        volatile int found = 0;
+        auto start = std::chrono::high_resolution_clock::now();
+        for (int k : keys) {
+            auto it = m.find(k);
+            if (it != m.end()) found += it->second;
+        }
+        auto end = std::chrono::high_resolution_clock::now();
+        return std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+    };
+
+    // std::map
+    {
+        std::map<int,int> stdMap;
+        for (int i = 0; i < N; ++i) stdMap.insert({i,i});
+        auto t = timedLookup(stdMap);
+        std::cout << "std::map lookup " << N << " keys:  " << t << " ms\n";
+    }
+
+    // rack::map
+    {
+        rack::map<int,int> rackMap;
+        for (int i = 0; i < N; ++i) rackMap.insert({i,i});
+        auto t = timedLookup(rackMap);
+        std::cout << "rack::map lookup " << N << " keys: " << t << " ms\n";
+    }
+}
+
+void map_benchMixedWorkload() {
+    const int N = 100'000;
+
+    auto mixedOps = [N](auto& m) {
+        // insert half
+        for (int i = 0; i < N/2; ++i) m.insert({i,i});
+
+        // lookups + updates
+        for (int i = 0; i < N; ++i) {
+            auto it = m.find(i % (N/2));
+            if (it != m.end()) it->second++;
+        }
+
+        // insert rest
+        for (int i = N/2; i < N; ++i) m.insert({i,i});
+    };
+
+    auto timeIt = [&](auto& m, const char* name) {
+        auto start = std::chrono::high_resolution_clock::now();
+        mixedOps(m);
+        auto end = std::chrono::high_resolution_clock::now();
+        auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+        std::cout << name << " mixed workload: " << ms << " ms\n";
+    };
+
+    std::map<int,int> stdMap;
+    rack::map<int,int> rackMap;
+    timeIt(stdMap, "std::map");
+    timeIt(rackMap, "rack::map");
+}
+
+
 ////////////////////////////////////////
 // run
 ////////////////////////////////////////
 
-std::string divider(std::string benchName) {
+void divider(std::string benchName) {
     std::ostringstream oss;
     oss << "\n"
         << "#########################" << "\n"  
         << "## " << benchName << "\n"
         << "#########################" << "\n";
-    return oss.str();
+    std::cout << oss.str();
 }
 
 void runBenchmarks() {
-    std::cout << divider("vector");
-    vector_benchPushBack();
-    vector_benchmarkIterate();
-    // vector_benchSort();
+    // divider("vector");
+    // vector_benchPushBack();
+    // vector_benchmarkIterate();
+    // // vector_benchSort();
     
-    std::cout << divider("shared_ptr");
-    shared_ptr_bench();
+    // divider("shared_ptr");
+    // shared_ptr_bench();
 
-    std::cout << divider("unique_ptr");
-    unique_ptr_bench();
+    // divider("unique_ptr");
+    // unique_ptr_bench();
 
-    std::cout << divider("deque");
-    deque_benchPush();
-    deque_benchIterate();
-    // deque_benchSort();
-    deque_benchRandomAccess();
+    // divider("deque");
+    // deque_benchPush();
+    // deque_benchIterate();
+    // // deque_benchSort();
+    // deque_benchRandomAccess();
+
+    divider("map");
+    map_benchInsert();
+    map_benchIterate();
+    map_benchLookup();
+    map_benchMixedWorkload();
 }
 
 int main() {

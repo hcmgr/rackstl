@@ -1,10 +1,11 @@
 TODO
     - map
-        - bench map
         - future:
             - test map with non-standard type, so have to pass my own comparators in
             - erase (fixDeletion in rbTree, then can use in map)
     - priority_queue
+        - start with std::vector, then migrate to rack::vector...its mine, and its faster!
+        - can also try deque
     - unordered_map
         - reserve
         - erase
