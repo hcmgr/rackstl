@@ -10,6 +10,7 @@
 #include "unique_ptr.hpp"
 #include "deque.hpp"
 #include "map.hpp"
+#include "priority_queue.hpp"
 
 struct MyClass {
     int val;
@@ -410,6 +411,10 @@ void deque_benchRandomAccess() {
     std::cout << "rack::deque random access time: " << rackDuration << " us\n";
 }
 
+////////////////////////////////////////
+// map benchmarks
+////////////////////////////////////////
+
 void map_benchInsert() {
     const int N = 100'000;
 
@@ -551,6 +556,97 @@ void map_benchMixedWorkload() {
     timeIt(rackMap, "rack::map");
 }
 
+////////////////////////////////////////
+// priority_queue benchmarks
+////////////////////////////////////////
+
+void priority_queue_benchPushPopContiguous() {
+    const int N = 1'000'000;
+
+    //
+    // std::priority_queue
+    //
+    {
+        std::priority_queue<int> stdPQ;
+
+        auto start = std::chrono::high_resolution_clock::now();
+
+        // all pushes
+        for (int i = 0; i < N; ++i)
+            stdPQ.push(i);
+
+        // all pops
+        for (int i = 0; i < N; ++i)
+            stdPQ.pop();
+
+        auto end = std::chrono::high_resolution_clock::now();
+        std::chrono::duration<double> elapsed = end - start;
+        std::cout << "std::priority_queue contiguous push+pop " << N
+                  << " ints: " << elapsed.count() << " seconds\n";
+    }
+
+    //
+    // rack::priority_queue
+    //
+    {
+        rack::priority_queue<int> rackPQ;
+
+        auto start = std::chrono::high_resolution_clock::now();
+
+        for (int i = 0; i < N; ++i)
+            rackPQ.push(i);
+
+        for (int i = 0; i < N; ++i)
+            rackPQ.pop();
+
+        auto end = std::chrono::high_resolution_clock::now();
+        std::chrono::duration<double> elapsed = end - start;
+        std::cout << "rack::priority_queue contiguous push+pop " << N
+                  << " ints: " << elapsed.count() << " seconds\n";
+    }
+}
+
+void priority_queue_benchPushPopInterleaved() {
+    const int N = 1'000'000;
+
+    //
+    // std::priority_queue
+    //
+    {
+        std::priority_queue<int> stdPQ;
+
+        auto start = std::chrono::high_resolution_clock::now();
+
+        for (int i = 0; i < N; ++i) {
+            stdPQ.push(i);
+            stdPQ.pop();   // pop immediately after each push
+        }
+
+        auto end = std::chrono::high_resolution_clock::now();
+        std::chrono::duration<double> elapsed = end - start;
+        std::cout << "std::priority_queue interleaved push+pop " << N
+                  << " ints: " << elapsed.count() << " seconds\n";
+    }
+
+    //
+    // rack::priority_queue
+    //
+    {
+        rack::priority_queue<int> rackPQ;
+
+        auto start = std::chrono::high_resolution_clock::now();
+
+        for (int i = 0; i < N; ++i) {
+            rackPQ.push(i);
+            rackPQ.pop();
+        }
+
+        auto end = std::chrono::high_resolution_clock::now();
+        std::chrono::duration<double> elapsed = end - start;
+        std::cout << "rack::priority_queue interleaved push+pop " << N
+                  << " ints: " << elapsed.count() << " seconds\n";
+    }
+}
 
 ////////////////////////////////////////
 // run
@@ -583,11 +679,15 @@ void runBenchmarks() {
     // // deque_benchSort();
     // deque_benchRandomAccess();
 
-    divider("map");
-    map_benchInsert();
-    map_benchIterate();
-    map_benchLookup();
-    map_benchMixedWorkload();
+    // divider("map");
+    // map_benchInsert();
+    // map_benchIterate();
+    // map_benchLookup();
+    // map_benchMixedWorkload();
+
+    divider("priority_queue");
+    priority_queue_benchPushPopContiguous();
+    priority_queue_benchPushPopInterleaved();
 }
 
 int main() {

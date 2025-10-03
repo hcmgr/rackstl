@@ -69,7 +69,7 @@ public:
     template <class ...Args>
     void emplace(Args&&... args) {
         int freeIdx = container.size();
-        container.insert(container.begin() + freeIdx, std::forward<Args>(args)...);
+        container.emplace_back(std::forward<Args>(args)...);
         upHeap(freeIdx);
     }
 
