@@ -17,8 +17,24 @@ public:
     //////////////////////////////////////////////////////
     // Constructors
     //////////////////////////////////////////////////////
-    priority_queue() {}
-    ~priority_queue() {}
+    priority_queue() = default;
+
+    priority_queue(const priority_queue& other)
+        : container(other.container) {}
+
+    priority_queue(priority_queue&& other)
+        : container(std::move(other.container)) {}
+
+    ~priority_queue() = default;
+
+    priority_queue& operator=(const priority_queue& other) { 
+        container = other.container; 
+        return *this;
+    }
+    priority_queue& operator=(priority_queue&& other) { 
+        container = std::move(other.container); 
+        return *this;
+    }
 
     //////////////////////////////////////////////////////
     // Access
@@ -30,7 +46,6 @@ public:
     //////////////////////////////////////////////////////
     // Capacity
     //////////////////////////////////////////////////////
-
     bool empty() {
         return container.empty();
     }
@@ -43,36 +58,70 @@ public:
     // Modifiers
     //////////////////////////////////////////////////////
 
-    int leftmostIdx() {
-        return container.size();
-    }
-
     void push(const V& val) {
-        
+        emplace(val);
     }
 
     void push(V&& val) {
-        int freeIdx = container.size();
-        container.insert(container.begin() + freeIdx, val);
-        upHeap(freeIdx);
+        emplace(val);
     }
 
     template <class ...Args>
     void emplace(Args&&... args) {
-
+        int freeIdx = container.size();
+        container.insert(container.begin() + freeIdx, std::forward<Args>(args)...);
+        upHeap(freeIdx);
     }
 
     void pop() {
-
+        if (container.empty()) {
+            return;
+        }
+        std::swap(container.front(), container.back());
+        container.pop_back();
+        downHeap(0);
     }
 
     void swap(priority_queue& other) {
+        std::swap(container, other.container);
+    }
 
+    std::string toString() {
+        if (container.empty()) {
+            return "[EMPTY]";
+        }
+        std::ostringstream oss;
+        toStringHelper(0, 0, oss);
+        return oss.str();
     }
 
     //////////////////////////////////////////////////////
     // Helpers
     //////////////////////////////////////////////////////
+
+    bool validHeap() {
+        int i = 0;
+        int N = container.size();
+        int l, r;
+        while (i < N) {
+            l = 2*i + 1;
+            r = 2*i + 2;
+            if (l < N && container[i] < container[l]) {
+                return false;
+            }
+            if (r < N && container[i] < container[r]) {
+                return false;
+            }
+            i++;
+        }
+        return true;
+    }
+
+    std::vector<V> getContainer() {
+        return container;
+    }
+
+private: 
     void upHeap(int i) {
         if (i == 0) {
             return;
@@ -86,18 +135,30 @@ public:
         }
     }
 
-    void downHeap(int idx) {
+    void downHeap(int i) {
+        int l = 2*i + 1;
+        int r = 2*i + 2;
+        int N = container.size();
 
+        int swapInd = -1;
+        if (l < N && container[l] > container[i]) {
+            swapInd = l;
+        }
+        if (r < N && container[r] > container[i]) {
+            if (swapInd != -1 && container[r] > container[l]) {
+                swapInd = r;
+            }
+        }
+        if (swapInd == -1) {
+            return;
+        }
+
+        std::swap(container[swapInd], container[i]);
+        downHeap(swapInd);
     }
 
     int parentIndex(int i) {
         return (i - 1) / 2;
-    }
-
-    std::string toString() {
-        std::ostringstream oss;
-        toStringHelper(0, 0, oss);
-        return oss.str();
     }
 
     void toStringHelper(int idx, int depth, std::ostringstream& oss) const {

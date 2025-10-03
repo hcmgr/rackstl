@@ -1468,20 +1468,56 @@ TEST(map_test, iterate) {
 
 TEST(priority_queue_test, general) {
     priority_queue<int> pq;
+    ASSERT_TRUE(pq.empty());
+    ASSERT_EQ(pq.size(), 0);
+
     pq.push(0);
-    std::cout << pq.toString() << "\n\n\n";
-    pq.push(1);
-    std::cout << pq.toString() << "\n\n\n";
-    pq.push(2);
-    std::cout << pq.toString() << "\n\n\n";
-    pq.push(3);
-    std::cout << pq.toString() << "\n\n\n";
+    ASSERT_EQ(pq.getContainer(), std::vector<int>({0}));
+    ASSERT_TRUE(pq.validHeap());
+
     pq.push(4);
-    std::cout << pq.toString() << "\n\n\n";
-    pq.push(5);
-    std::cout << pq.toString() << "\n\n\n";
-    pq.push(6);
-    std::cout << pq.toString() << "\n\n\n";
+    ASSERT_EQ(pq.getContainer(), std::vector<int>({4,0}));
+    ASSERT_TRUE(pq.validHeap());
+
+    pq.push(2);
+    ASSERT_EQ(pq.getContainer(), std::vector<int>({4,0,2}));
+    ASSERT_TRUE(pq.validHeap());
+
+    int val = 5;
+    pq.push(val);
+    ASSERT_EQ(pq.getContainer(), std::vector<int>({5,4,2,0}));
+    ASSERT_TRUE(pq.validHeap());
+
+    val = 7;
+    pq.push(val);
+    ASSERT_EQ(pq.getContainer(), std::vector<int>({7,5,2,0,4}));
+    ASSERT_TRUE(pq.validHeap());
+
+    pq.pop();
+    ASSERT_EQ(pq.getContainer(), std::vector<int>({5,4,2,0}));
+    ASSERT_TRUE(pq.validHeap());
+
+    pq.pop();
+    ASSERT_EQ(pq.getContainer(), std::vector<int>({4,0,2}));
+    ASSERT_TRUE(pq.validHeap());
+
+    pq.pop();
+    ASSERT_EQ(pq.getContainer(), std::vector<int>({2,0}));
+    ASSERT_TRUE(pq.validHeap());
+
+    pq.pop();
+    ASSERT_EQ(pq.getContainer(), std::vector<int>({0}));
+    ASSERT_TRUE(pq.validHeap());
+
+    pq.pop();
+    ASSERT_EQ(pq.getContainer(), std::vector<int>({}));
+    ASSERT_TRUE(pq.validHeap());
+
+    pq.pop();
+    ASSERT_EQ(pq.getContainer(), std::vector<int>({}));
+    ASSERT_TRUE(pq.validHeap());
+    ASSERT_TRUE(pq.empty());
+    ASSERT_EQ(pq.size(), 0);
 }
 
 }; // end 'rack'
