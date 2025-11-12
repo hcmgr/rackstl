@@ -6,7 +6,7 @@ namespace rack {
 //
 // priority_queue implemented as a max heap.
 //
-// Max heap is full binary tree where all children and <= parent.
+// Max heap is full binary tree where all children are <= parent.
 //
 template <class V>
 class priority_queue {
