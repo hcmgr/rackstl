@@ -5,9 +5,7 @@ A from-scratch implementation of C++'s core standard library (STL).
 - Core data structures
   - vector, map, set, unordered_map, unordered_set, deque, queue, priority_queue
 - Smart pointers
-  - shared_ptr, unique_ptr, weak_ptr
-- Concurrency primitives
-  - thread, lock_guard
+  - shared_ptr, unique_ptr, weak_ptr + shared_from_this
 - Benchmarking
   - Each implementation benchmarked against STL corrolary
 - Testing

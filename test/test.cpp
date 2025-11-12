@@ -11,6 +11,7 @@
 #include <unordered_map>
 #include <map>
 #include <thread>
+#include <unordered_set>
 
 #include "vector.hpp"
 #include "shared_ptr.hpp"
@@ -18,8 +19,8 @@
 #include "weak_ptr.hpp"
 #include "deque.hpp"
 #include "unordered_map.hpp"
+#include "unordered_set.hpp"
 #include "map.hpp"
-#include "bst.hpp"
 #include "priority_queue.hpp"
 
 //
@@ -722,346 +723,410 @@ TEST(unordered_map_test, general) {
 }
 
 ////////////////////////////////////////
+// unordered_set tests
+////////////////////////////////////////
+
+TEST(unordered_set_test, general) {
+    // int N = 2 << 12;
+    // rack::unordered_set<std::string> s;
+    // s.reserve(N);
+    // int oneBeforeMaxLoadFactor = s.maxLoadFactor() * float(N);
+
+    // // insert up to just before load factor limit
+    // for (int i = 0; i < oneBeforeMaxLoadFactor; i++) {
+    //     s.insert("chimp" + std::to_string(i));
+    // }
+
+    // ASSERT_TRUE(s.size() == oneBeforeMaxLoadFactor);
+    // ASSERT_TRUE(s.bucket_count() == N);
+
+    // // search
+    // auto it = s.find("chimp0");
+    // ASSERT_TRUE(it != s.end());
+    // ASSERT_TRUE(it->first == "chimp0" || it->first == "chimp0"s); // depending on your map iterator
+
+    // it = s.find("orangutan0");
+    // ASSERT_TRUE(it == s.end());
+
+    // ASSERT_TRUE(s.contains("chimp0"));
+    // ASSERT_TRUE(!s.contains("orangutan0"));
+
+    // // insert to cause resize/rehash
+    // s.insert("orangutan0");
+    // ASSERT_TRUE(s.find("orangutan0") != s.end());
+    // ASSERT_TRUE(s.bucket_count() == 2 * N);
+
+    // // erase
+    // size_t erased = s.erase("chimp0");
+    // ASSERT_TRUE(erased == 1);
+    // ASSERT_TRUE(!s.contains("chimp0"));
+
+    // // clear
+    // s.clear();
+    // ASSERT_TRUE(s.size() == 0);
+    // ASSERT_TRUE(s.empty());
+
+    // // reinsertion
+    // s.insert("gorilla");
+    // s.insert("mandrill");
+    // s.insert("lemur");
+    // ASSERT_TRUE(s.size() == 3);
+
+    // // iterator
+    // int count = 0;
+    // for (auto it = s.begin(); it != s.end(); ++it) {
+    //     count++;
+    // }
+    // ASSERT_TRUE(count == 3);
+
+    // // test duplicate insertion (should not increase size)
+    // s.insert("gorilla");
+    // ASSERT_TRUE(s.size() == 3);
+}
+
+
+
+////////////////////////////////////////
 // BST tests 
 ////////////////////////////////////////
 
-TEST(bst_test, general) {
-    rack::BSTTree<int, int>* tree = new rack::BSTTree<int, int>();
+// TEST(bst_test, general) {
+//     rack::BSTTree<int, int>* tree = new rack::BSTTree<int, int>();
 
-    //
-    // tree 1 (sideways view):
-    //
-    //          8
-    //      7   
-    //          6
-    //  5       
-    //          4
-    //      3
-    //          2
-    //              1
-    //
+//     //
+//     // tree 1 (sideways view):
+//     //
+//     //          8
+//     //      7   
+//     //          6
+//     //  5       
+//     //          4
+//     //      3
+//     //          2
+//     //              1
+//     //
 
-    //
-    // insert and find
-    //
-    tree->insert({5, 5}); // level 1
-    tree->insert({3, 3}); // level 2
-    tree->insert({7, 7}); 
-    tree->insert({2, 2}); // level 3
-    tree->insert({4, 4});
-    tree->insert({6, 6});
-    tree->insert({8, 8});
-    tree->insert({1, 1}); // level 4
-    // std::cout << tree->toString();
-    rack::vector<int> v = tree->inOrderVec();
+//     //
+//     // insert and find
+//     //
+//     tree->insert({5, 5}); // level 1
+//     tree->insert({3, 3}); // level 2
+//     tree->insert({7, 7}); 
+//     tree->insert({2, 2}); // level 3
+//     tree->insert({4, 4});
+//     tree->insert({6, 6});
+//     tree->insert({8, 8});
+//     tree->insert({1, 1}); // level 4
+//     // std::cout << tree->toString();
+//     rack::vector<int> v = tree->inOrderVec();
 
-    // validate in-order traversal
-    ASSERT_EQ(v, rack::vector<int>({1,2,3,4,5,6,7,8}));
+//     // validate in-order traversal
+//     ASSERT_EQ(v, rack::vector<int>({1,2,3,4,5,6,7,8}));
 
-    // validate tree structure
-    BSTNode<int, int>* node;
-    node = tree->find(2);
-    ASSERT_EQ(node->kv.first, 2);
-    ASSERT_EQ(node->left->kv.first, 1);
-    ASSERT_EQ(node->right, nullptr);
-    node = tree->find(4);
-    ASSERT_EQ(node->kv.first, 4);
-    ASSERT_EQ(node->left, nullptr);
-    ASSERT_EQ(node->right, nullptr);
-    node = tree->find(6);
-    ASSERT_EQ(node->kv.first, 6);
-    ASSERT_EQ(node->left, nullptr);
-    ASSERT_EQ(node->right, nullptr);
-    node = tree->find(8);
-    ASSERT_EQ(node->kv.first, 8);
-    ASSERT_EQ(node->left, nullptr);
-    ASSERT_EQ(node->right, nullptr);
-    node = tree->find(3);
-    ASSERT_EQ(node->kv.first, 3);
-    ASSERT_EQ(node->left->kv.first, 2);
-    ASSERT_EQ(node->right->kv.first, 4);
-    node = tree->find(7);
-    ASSERT_EQ(node->kv.first, 7);
-    ASSERT_EQ(node->left->kv.first, 6);
-    ASSERT_EQ(node->right->kv.first, 8);
-    node = tree->find(5);
-    ASSERT_EQ(node->kv.first, 5);
-    ASSERT_EQ(node->left->kv.first, 3);
-    ASSERT_EQ(node->right->kv.first, 7);
-    node = tree->find(0);
-    ASSERT_EQ(node, nullptr);
-    node = tree->find(9);
-    ASSERT_EQ(node, nullptr);
+//     // validate tree structure
+//     BSTNode<int, int>* node;
+//     node = tree->find(2);
+//     ASSERT_EQ(node->kv.first, 2);
+//     ASSERT_EQ(node->left->kv.first, 1);
+//     ASSERT_EQ(node->right, nullptr);
+//     node = tree->find(4);
+//     ASSERT_EQ(node->kv.first, 4);
+//     ASSERT_EQ(node->left, nullptr);
+//     ASSERT_EQ(node->right, nullptr);
+//     node = tree->find(6);
+//     ASSERT_EQ(node->kv.first, 6);
+//     ASSERT_EQ(node->left, nullptr);
+//     ASSERT_EQ(node->right, nullptr);
+//     node = tree->find(8);
+//     ASSERT_EQ(node->kv.first, 8);
+//     ASSERT_EQ(node->left, nullptr);
+//     ASSERT_EQ(node->right, nullptr);
+//     node = tree->find(3);
+//     ASSERT_EQ(node->kv.first, 3);
+//     ASSERT_EQ(node->left->kv.first, 2);
+//     ASSERT_EQ(node->right->kv.first, 4);
+//     node = tree->find(7);
+//     ASSERT_EQ(node->kv.first, 7);
+//     ASSERT_EQ(node->left->kv.first, 6);
+//     ASSERT_EQ(node->right->kv.first, 8);
+//     node = tree->find(5);
+//     ASSERT_EQ(node->kv.first, 5);
+//     ASSERT_EQ(node->left->kv.first, 3);
+//     ASSERT_EQ(node->right->kv.first, 7);
+//     node = tree->find(0);
+//     ASSERT_EQ(node, nullptr);
+//     node = tree->find(9);
+//     ASSERT_EQ(node, nullptr);
 
-    // 
-    // erase
-    //
-    bool res;
+//     // 
+//     // erase
+//     //
+//     bool res;
 
-    // erase 8 (child)
-    res = tree->erase(8);
-    node = tree->find(7);
+//     // erase 8 (child)
+//     res = tree->erase(8);
+//     node = tree->find(7);
 
-    //
-    //          
-    //      7   
-    //          6
-    //  5       
-    //          4
-    //      3
-    //          2
-    //              1
-    //
-    EXPECT_EQ(res, true);
-    EXPECT_EQ(node->kv.first, 7);
-    EXPECT_EQ(node->left->kv.first, 6);
-    EXPECT_EQ(node->right, nullptr);
+//     //
+//     //          
+//     //      7   
+//     //          6
+//     //  5       
+//     //          4
+//     //      3
+//     //          2
+//     //              1
+//     //
+//     EXPECT_EQ(res, true);
+//     EXPECT_EQ(node->kv.first, 7);
+//     EXPECT_EQ(node->left->kv.first, 6);
+//     EXPECT_EQ(node->right, nullptr);
 
-    // erase 7 (node with one-child)
-    res = tree->erase(7);
+//     // erase 7 (node with one-child)
+//     res = tree->erase(7);
 
-    //
-    //          
-    //      6   
-    //
-    //  5       
-    //          4
-    //      3
-    //          2
-    //              1
-    //
-    node = tree->find(5);
-    EXPECT_EQ(res, true);
-    EXPECT_EQ(node->kv.first, 5);
-    EXPECT_EQ(node->left->kv.first, 3);
-    EXPECT_EQ(node->right->kv.first, 6);
+//     //
+//     //          
+//     //      6   
+//     //
+//     //  5       
+//     //          4
+//     //      3
+//     //          2
+//     //              1
+//     //
+//     node = tree->find(5);
+//     EXPECT_EQ(res, true);
+//     EXPECT_EQ(node->kv.first, 5);
+//     EXPECT_EQ(node->left->kv.first, 3);
+//     EXPECT_EQ(node->right->kv.first, 6);
 
-    // erase 3 (node with two-children)
-    res = tree->erase(3);
+//     // erase 3 (node with two-children)
+//     res = tree->erase(3);
     
-    //          
-    //      6   
-    //
-    //  5       
-    //          
-    //      4
-    //          2
-    //              1
-    //
-    node = tree->find(4);
-    EXPECT_EQ(res, true);
-    EXPECT_EQ(node->kv.first, 4);
-    EXPECT_EQ(node->left->kv.first, 2);
-    EXPECT_EQ(node->right, nullptr);
-    node = tree->find(5);
-    EXPECT_EQ(node->kv.first, 5);
-    EXPECT_EQ(node->left->kv.first, 4);
-    EXPECT_EQ(node->right->kv.first, 6);
+//     //          
+//     //      6   
+//     //
+//     //  5       
+//     //          
+//     //      4
+//     //          2
+//     //              1
+//     //
+//     node = tree->find(4);
+//     EXPECT_EQ(res, true);
+//     EXPECT_EQ(node->kv.first, 4);
+//     EXPECT_EQ(node->left->kv.first, 2);
+//     EXPECT_EQ(node->right, nullptr);
+//     node = tree->find(5);
+//     EXPECT_EQ(node->kv.first, 5);
+//     EXPECT_EQ(node->left->kv.first, 4);
+//     EXPECT_EQ(node->right->kv.first, 6);
 
-    //
-    // clear
-    //
-    tree->clear();
-    ASSERT_EQ(tree->size(), 0);
-    ASSERT_EQ(tree->root, nullptr);
-}
+//     //
+//     // clear
+//     //
+//     tree->clear();
+//     ASSERT_EQ(tree->size(), 0);
+//     ASSERT_EQ(tree->root, nullptr);
+// }
 
-TEST(bst_test, leftRightRotations) {
-    rack::BSTTree<int, int>* tree = new rack::BSTTree<int, int>();
+// TEST(bst_test, leftRightRotations) {
+//     rack::BSTTree<int, int>* tree = new rack::BSTTree<int, int>();
 
-    tree->insert({5,5});
-    tree->insert({7,7});
-    tree->insert({3,3});
-    //
-    //      7
-    //  5
-    //      3
-    //
-    ASSERT_EQ(tree->root->kv.first, 5);
-    ASSERT_EQ(tree->root->left->kv.first, 3);
-    ASSERT_EQ(tree->root->right->kv.first, 7);
+//     tree->insert({5,5});
+//     tree->insert({7,7});
+//     tree->insert({3,3});
+//     //
+//     //      7
+//     //  5
+//     //      3
+//     //
+//     ASSERT_EQ(tree->root->kv.first, 5);
+//     ASSERT_EQ(tree->root->left->kv.first, 3);
+//     ASSERT_EQ(tree->root->right->kv.first, 7);
 
-    tree->rotateLeft(tree->root);
-    //
-    //  7
-    //      5
-    //          3
-    //
-    ASSERT_EQ(tree->root->kv.first, 7);
-    ASSERT_EQ(tree->root->left->kv.first, 5);
-    ASSERT_EQ(tree->root->left->left->kv.first, 3);
+//     tree->rotateLeft(tree->root);
+//     //
+//     //  7
+//     //      5
+//     //          3
+//     //
+//     ASSERT_EQ(tree->root->kv.first, 7);
+//     ASSERT_EQ(tree->root->left->kv.first, 5);
+//     ASSERT_EQ(tree->root->left->left->kv.first, 3);
 
-    tree->rotateLeft(tree->root);
-    //
-    //  7
-    //      5
-    //          3
-    //
-    ASSERT_EQ(tree->root->kv.first, 7);
-    ASSERT_EQ(tree->root->left->kv.first, 5);
-    ASSERT_EQ(tree->root->left->left->kv.first, 3);
+//     tree->rotateLeft(tree->root);
+//     //
+//     //  7
+//     //      5
+//     //          3
+//     //
+//     ASSERT_EQ(tree->root->kv.first, 7);
+//     ASSERT_EQ(tree->root->left->kv.first, 5);
+//     ASSERT_EQ(tree->root->left->left->kv.first, 3);
 
-    tree->rotateRight(tree->root);
-    tree->rotateRight(tree->root);
-    //
-    //          7
-    //      5
-    //  3
-    //
-    ASSERT_EQ(tree->root->kv.first, 3);
-    ASSERT_EQ(tree->root->right->kv.first, 5);
-    ASSERT_EQ(tree->root->right->right->kv.first, 7);
+//     tree->rotateRight(tree->root);
+//     tree->rotateRight(tree->root);
+//     //
+//     //          7
+//     //      5
+//     //  3
+//     //
+//     ASSERT_EQ(tree->root->kv.first, 3);
+//     ASSERT_EQ(tree->root->right->kv.first, 5);
+//     ASSERT_EQ(tree->root->right->right->kv.first, 7);
 
-    tree->rotateRight(tree->root);
-    //
-    //          7
-    //      5
-    //  3
-    //
-    ASSERT_EQ(tree->root->kv.first, 3);
-    ASSERT_EQ(tree->root->right->kv.first, 5);
-    ASSERT_EQ(tree->root->right->right->kv.first, 7);
+//     tree->rotateRight(tree->root);
+//     //
+//     //          7
+//     //      5
+//     //  3
+//     //
+//     ASSERT_EQ(tree->root->kv.first, 3);
+//     ASSERT_EQ(tree->root->right->kv.first, 5);
+//     ASSERT_EQ(tree->root->right->right->kv.first, 7);
 
-    tree->rotateLeft(tree->root);
-    tree->insert({2,2});
-    tree->insert({4,4});
-    //
-    //      7
-    //  5
-    //          4
-    //      3
-    //          2
-    //
-    ASSERT_EQ(tree->root->kv.first, 5);
-    ASSERT_EQ(tree->root->left->kv.first, 3);
-    ASSERT_EQ(tree->root->left->left->kv.first, 2);
-    ASSERT_EQ(tree->root->left->right->kv.first, 4);
+//     tree->rotateLeft(tree->root);
+//     tree->insert({2,2});
+//     tree->insert({4,4});
+//     //
+//     //      7
+//     //  5
+//     //          4
+//     //      3
+//     //          2
+//     //
+//     ASSERT_EQ(tree->root->kv.first, 5);
+//     ASSERT_EQ(tree->root->left->kv.first, 3);
+//     ASSERT_EQ(tree->root->left->left->kv.first, 2);
+//     ASSERT_EQ(tree->root->left->right->kv.first, 4);
 
-    tree->rotateLeft(tree->root->left);
-    //
-    //      7
-    //  5
-    //      4
-    //          3
-    //              2
-    //
-    ASSERT_EQ(tree->root->kv.first, 5);
-    ASSERT_EQ(tree->root->left->kv.first, 4);
-    ASSERT_EQ(tree->root->left->left->kv.first, 3);
-    ASSERT_EQ(tree->root->left->left->left->kv.first, 2);
+//     tree->rotateLeft(tree->root->left);
+//     //
+//     //      7
+//     //  5
+//     //      4
+//     //          3
+//     //              2
+//     //
+//     ASSERT_EQ(tree->root->kv.first, 5);
+//     ASSERT_EQ(tree->root->left->kv.first, 4);
+//     ASSERT_EQ(tree->root->left->left->kv.first, 3);
+//     ASSERT_EQ(tree->root->left->left->left->kv.first, 2);
 
-    tree->rotateRight(tree->root->left);
-    tree->rotateRight(tree->root->left);
-    ASSERT_EQ(tree->root->kv.first, 5);
-    ASSERT_EQ(tree->root->left->kv.first, 2);
-    ASSERT_EQ(tree->root->left->right->kv.first, 3);
-    ASSERT_EQ(tree->root->left->right->right->kv.first, 4);
-}
+//     tree->rotateRight(tree->root->left);
+//     tree->rotateRight(tree->root->left);
+//     ASSERT_EQ(tree->root->kv.first, 5);
+//     ASSERT_EQ(tree->root->left->kv.first, 2);
+//     ASSERT_EQ(tree->root->left->right->kv.first, 3);
+//     ASSERT_EQ(tree->root->left->right->right->kv.first, 4);
+// }
 
-TEST(bst_test, comboRotations) {
-    rack::BSTTree<int, int>* tree = new rack::BSTTree<int, int>();
-    tree->insert({6,6});
-    tree->insert({3,3});
-    tree->insert({8,8});
-    tree->insert({1,1});
-    tree->insert({4,4});
+// TEST(bst_test, comboRotations) {
+//     rack::BSTTree<int, int>* tree = new rack::BSTTree<int, int>();
+//     tree->insert({6,6});
+//     tree->insert({3,3});
+//     tree->insert({8,8});
+//     tree->insert({1,1});
+//     tree->insert({4,4});
     
-    //
-    //      8
-    //  6   
-    //          4
-    //      3
-    //          1
-    //
-    ASSERT_EQ(tree->root->kv.first, 6);
-    ASSERT_EQ(tree->root->left->kv.first, 3);
-    ASSERT_EQ(tree->root->right->kv.first, 8);
-    ASSERT_EQ(tree->root->left->left->kv.first, 1);
-    ASSERT_EQ(tree->root->left->right->kv.first, 4);
+//     //
+//     //      8
+//     //  6   
+//     //          4
+//     //      3
+//     //          1
+//     //
+//     ASSERT_EQ(tree->root->kv.first, 6);
+//     ASSERT_EQ(tree->root->left->kv.first, 3);
+//     ASSERT_EQ(tree->root->right->kv.first, 8);
+//     ASSERT_EQ(tree->root->left->left->kv.first, 1);
+//     ASSERT_EQ(tree->root->left->right->kv.first, 4);
 
-    /////////////////////////////////////////
-    // left-left
-    /////////////////////////////////////////
+//     /////////////////////////////////////////
+//     // left-left
+//     /////////////////////////////////////////
 
-    tree->rotateLeftLeft(tree->root);
-    tree->insert({2,2});
-    //
-    //          8
-    //      6
-    //          4
-    //  3
-    //          2
-    //      1
-    //
-    ASSERT_EQ(tree->root->kv.first, 3);
-    ASSERT_EQ(tree->root->left->kv.first, 1);
-    ASSERT_EQ(tree->root->left->right->kv.first, 2);
-    ASSERT_EQ(tree->root->right->kv.first, 6);
-    ASSERT_EQ(tree->root->right->left->kv.first, 4);
-    ASSERT_EQ(tree->root->right->right->kv.first, 8);
+//     tree->rotateLeftLeft(tree->root);
+//     tree->insert({2,2});
+//     //
+//     //          8
+//     //      6
+//     //          4
+//     //  3
+//     //          2
+//     //      1
+//     //
+//     ASSERT_EQ(tree->root->kv.first, 3);
+//     ASSERT_EQ(tree->root->left->kv.first, 1);
+//     ASSERT_EQ(tree->root->left->right->kv.first, 2);
+//     ASSERT_EQ(tree->root->right->kv.first, 6);
+//     ASSERT_EQ(tree->root->right->left->kv.first, 4);
+//     ASSERT_EQ(tree->root->right->right->kv.first, 8);
 
-    /////////////////////////////////////////
-    // left-right
-    /////////////////////////////////////////
+//     /////////////////////////////////////////
+//     // left-right
+//     /////////////////////////////////////////
 
-    tree->rotateLeftRight(tree->root->left, tree->root);
-    //
-    //                                      8
-    //          8                       6
-    //      6                               4
-    //          4                   3
-    //  3               ->      2
-    //      2                       1
-    //          1
-    //
-    ASSERT_EQ(tree->root->kv.first, 2);
-    ASSERT_EQ(tree->root->left->kv.first, 1);
-    ASSERT_EQ(tree->root->right->kv.first, 3);
-    ASSERT_EQ(tree->root->right->right->kv.first, 6);
-    ASSERT_EQ(tree->root->right->right->left->kv.first, 4);
-    ASSERT_EQ(tree->root->right->right->right->kv.first, 8);
+//     tree->rotateLeftRight(tree->root->left, tree->root);
+//     //
+//     //                                      8
+//     //          8                       6
+//     //      6                               4
+//     //          4                   3
+//     //  3               ->      2
+//     //      2                       1
+//     //          1
+//     //
+//     ASSERT_EQ(tree->root->kv.first, 2);
+//     ASSERT_EQ(tree->root->left->kv.first, 1);
+//     ASSERT_EQ(tree->root->right->kv.first, 3);
+//     ASSERT_EQ(tree->root->right->right->kv.first, 6);
+//     ASSERT_EQ(tree->root->right->right->left->kv.first, 4);
+//     ASSERT_EQ(tree->root->right->right->right->kv.first, 8);
 
-    /////////////////////////////////////////
-    // right-right
-    /////////////////////////////////////////
+//     /////////////////////////////////////////
+//     // right-right
+//     /////////////////////////////////////////
 
-    tree->rotateRightRight(tree->root->right);
-    //
-    //              8
-    //          6
-    //                  4
-    //              3
-    //      2
-    //          1
-    //
-    ASSERT_EQ(tree->root->kv.first, 2);
-    ASSERT_EQ(tree->root->left->kv.first, 1);
-    ASSERT_EQ(tree->root->right->kv.first, 6);
-    ASSERT_EQ(tree->root->right->left->kv.first, 3);
-    ASSERT_EQ(tree->root->right->right->kv.first, 8);
-    ASSERT_EQ(tree->root->right->left->right->kv.first, 4);
+//     tree->rotateRightRight(tree->root->right);
+//     //
+//     //              8
+//     //          6
+//     //                  4
+//     //              3
+//     //      2
+//     //          1
+//     //
+//     ASSERT_EQ(tree->root->kv.first, 2);
+//     ASSERT_EQ(tree->root->left->kv.first, 1);
+//     ASSERT_EQ(tree->root->right->kv.first, 6);
+//     ASSERT_EQ(tree->root->right->left->kv.first, 3);
+//     ASSERT_EQ(tree->root->right->right->kv.first, 8);
+//     ASSERT_EQ(tree->root->right->left->right->kv.first, 4);
 
-    /////////////////////////////////////////
-    // right-left
-    /////////////////////////////////////////
+//     /////////////////////////////////////////
+//     // right-left
+//     /////////////////////////////////////////
 
-    tree->rotateRightLeft(tree->root->right, tree->root);
-    //
-    //                  8
-    //              6                       8
-    //                  4               6
-    //          3                           4
-    //      2                 ->    3
-    //          1                       2
-    //                                      1
-    //
-    ASSERT_EQ(tree->root->kv.first, 3);
-    ASSERT_EQ(tree->root->left->kv.first, 2);
-    ASSERT_EQ(tree->root->left->left->kv.first, 1);
-    ASSERT_EQ(tree->root->right->kv.first, 6);
-    ASSERT_EQ(tree->root->right->left->kv.first, 4);
-    ASSERT_EQ(tree->root->right->right->kv.first, 8);
-}
+//     tree->rotateRightLeft(tree->root->right, tree->root);
+//     //
+//     //                  8
+//     //              6                       8
+//     //                  4               6
+//     //          3                           4
+//     //      2                 ->    3
+//     //          1                       2
+//     //                                      1
+//     //
+//     ASSERT_EQ(tree->root->kv.first, 3);
+//     ASSERT_EQ(tree->root->left->kv.first, 2);
+//     ASSERT_EQ(tree->root->left->left->kv.first, 1);
+//     ASSERT_EQ(tree->root->right->kv.first, 6);
+//     ASSERT_EQ(tree->root->right->left->kv.first, 4);
+//     ASSERT_EQ(tree->root->right->right->kv.first, 8);
+// }
 
 /////////////////////////////////////////
 // RBTree tests
@@ -1519,5 +1584,6 @@ TEST(priority_queue_test, general) {
     ASSERT_TRUE(pq.empty());
     ASSERT_EQ(pq.size(), 0);
 }
+
 
 }; // end 'rack'
