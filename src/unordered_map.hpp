@@ -1,4 +1,5 @@
 #pragma once
+#include <gtest/gtest.h>
 #include <iostream>
 #include <memory>
 #include <algorithm>
@@ -31,6 +32,7 @@ namespace rack {
 template <class K, class V, class Alloc = std::allocator<std::pair<const K, V>>>
 class unordered_map {
 private:
+
     enum BucketState { EMPTY, OCCUPIED, DELETED };
 
     struct Bucket {
@@ -45,10 +47,10 @@ private:
     size_t _size;
     size_t _capacity;
     float _maxLoadFactor = 0.75f;
-
     std::allocator<Bucket> tableAllocator;
-
     std::hash<K> keyHash;
+
+
 
 public:
     class iterator;
@@ -87,10 +89,6 @@ public:
         keyHash = std::hash<K>{}; 
     }
 
-    unordered_map(std::initializer_list<std::pair<const K, V>> init) {
-
-    }
-
     //
     // Copy constructor.
     // 
@@ -100,27 +98,40 @@ public:
     unordered_map(const unordered_map& other) {
         _size = other._size;
         _capacity = other._capacity;
-
-        std::allocator<Bucket> tableAllocator = 
+        _maxLoadFactor = other._maxLoadFactor;
+        tableAllocator = 
             std::allocator_traits<Alloc>::select_on_container_copy_construction(other.tableAllocator);
 
         table = tableAllocator.allocate(_capacity);
         for (size_t i = 0; i < _capacity; i++) {
-            // only copy occupied states - if empty or deleted, construct empty bucket
-            if (other.table[i].state == OCCUPIED) {
-                utils::allocConstruct(tableAllocator, table + i, other.table[i]);
-            } else {
-                utils::allocConstruct(tableAllocator, table + i);
-            }
+            utils::allocConstruct(tableAllocator, table + i, other.table[i]);
         }
+
+        std::cout << "[unordered_map] copy ctor" << "\n";
     }
 
+    //
     // move constructor
+    //
     unordered_map(unordered_map&& other) {
+        _size = other._size;
+        _capacity = other._capacity;
+        _maxLoadFactor = other._maxLoadFactor;
+        table = other.table;
+        tableAllocator = std::move(other.tableAllocator);
 
+        other._size = 0;
+        other._capacity = 0;
+        other.table = nullptr;
+
+        std::cout << "[unordered_map] move ctor" << "\n";
     }
 
     ~unordered_map() {
+        if (!table) {
+            return;
+        }
+
         for (size_t i = 0; i < _capacity; i++) {
             utils::allocDestroy(tableAllocator, table + i);
         }
@@ -223,6 +234,7 @@ public:
 
     iterator erase(iterator pos) {
         if (pos < begin() || pos >= end()) {
+            std::cout << "iterator invalid" << "\n";
             throw std::runtime_error("iterator invalid");
         }
 
@@ -230,7 +242,10 @@ public:
 
         Bucket& bucket = *(pos.bucketPtr);
         utils::allocDestroy(tableAllocator, &(bucket.kv));
-        bucket.state = EMPTY;
+        bucket.state = DELETED;
+        if (_size > 0) {
+            _size--;
+        }
 
         return next;
     }
@@ -303,15 +318,16 @@ public:
     //////////////////////////////////////////////////////
 
     //
-    // 'iterator' is a simple wrapper around the table pointer.
+    // iterator is a simple wrapper around a table pointer. It also stores the 'end' pointer,
+    // which is one past the last element.
+    //
     // Like std::unordered_map, our iterator satisfies ForwardIterator, which
     // only requires *it, ++it / it++ and == / !=.
     //
     class iterator {
-    private:
+    public:
         Bucket* bucketPtr;
         Bucket* endPtr;
-    public:
 
         // typedefs - necessary for other STL functions to use this (e.g. std::sort)
         using iterator_category = std::random_access_iterator_tag;
@@ -340,9 +356,13 @@ public:
         value_type operator*() const { return bucketPtr->kv; }
         value_type* operator->() const { return &(bucketPtr->kv); }
 
-        // equality
+        // equality and comparison
         bool operator==(const iterator& other) const { return bucketPtr == other.bucketPtr; }
         bool operator!=(const iterator& other) const { return !(*this == other); }
+        bool operator<(const iterator& other) const { return bucketPtr < other.bucketPtr; }
+        bool operator<=(const iterator& other) const { return bucketPtr <= other.bucketPtr; }
+        bool operator>(const iterator& other) const { return !(*this <= other); }
+        bool operator>=(const iterator& other) const { return !(*this < other); }
 
         // pre-inc
         iterator& operator++() {
@@ -359,10 +379,6 @@ public:
             ++(*this);
             return tmp;
         }
-
-        //
-        // Other operators - implemented for internal use
-        //
 
         iterator& operator+=(size_t i) {
             while (i-- > 0) {
@@ -485,5 +501,10 @@ private:
     bool loadFactorSatisfied(size_t n) {
         return _maxLoadFactor * static_cast<float>(n) > static_cast<float>(_size);
     }
+
+    //
+    // Test friends, i.e. all tests that access private variables
+    //
+    FRIEND_TEST(unordered_map_test, copy_and_move_construct);
 };
 }; // end of 'rack'

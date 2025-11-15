@@ -693,33 +693,79 @@ TEST(unordered_map_test, general) {
     auto it = m.find("monkey0");
     ASSERT_TRUE(it->first == "monkey0" && it->second == 0);
     ASSERT_TRUE(m.at("monkey0") == 0);
-
     it = m.find("bonobo0");
     ASSERT_TRUE(it == m.end());
     ASSERT_THROW(m.at("bonobo0"), std::out_of_range);
-
     ASSERT_TRUE(m.contains("monkey0"));
     ASSERT_TRUE(!m.contains("bonobo0"));
 
     // insert to cause resize/rehash
+    int prevSize = m.size();
     m.insert({"bonobo0", 0});
     ASSERT_TRUE(m.find("bonobo0") != m.end());
     ASSERT_TRUE(m.capacity() == 2*N);
+    ASSERT_TRUE(m.size() == prevSize + 1);
+
+    // erase
+    prevSize = m.size();
+    m.erase("bonobo0");
+    ASSERT_TRUE(m.find("bonobo0") == m.end());
+    ASSERT_TRUE(m.size() == prevSize - 1);
+    ASSERT_TRUE(m.capacity() == 2 * N); // capacity stays same
 
     // clear
     m.clear();
     ASSERT_TRUE(m.size() == 0);
     ASSERT_TRUE(m.empty() == true);
+    ASSERT_TRUE(m.capacity() == 2 * N); // capacity stays same
 
-    // [] insert
-
-    // erase
-
-    // verify robin hood internals work correctly (i.e. stealing is correct)
+    //
+    // TODO
+    //
+    // - verify robin hood internals work correctly (i.e. stealing is correct)
     // note: separate test for this
+    //
+}
 
-    // test iterator
-    // note: separate test for this
+TEST(unordered_map_test, iterate) {
+    //
+    // TODO
+    //
+    return;
+}
+
+TEST(unordered_map_test, copy_and_move_construct) {
+    int N = 1000;
+    int initCapacity = 4096;
+    rack::unordered_map<int, int> m(initCapacity);
+    for (int i = 0; i < N; i++) {
+        m.insert({i, i});
+    }
+
+    //
+    // copy construct
+    //
+    rack::unordered_map<int, int> mCopy = m;
+    ASSERT_EQ(mCopy.capacity(), initCapacity);
+    ASSERT_EQ(mCopy.size(), N);
+    ASSERT_EQ(mCopy.loadFactor(), m.loadFactor());
+    for (int i = 0; i < N; i++) {
+        ASSERT_TRUE(mCopy.find(i) != mCopy.end());
+    }
+
+    //
+    // move construct
+    //
+    rack::unordered_map<int, int> mMove = std::move(m);
+    ASSERT_EQ(mMove.capacity(), initCapacity);
+    ASSERT_EQ(mMove.size(), N);
+    for (int i = 0; i < N; i++) {
+        ASSERT_TRUE(mMove.find(i) != mMove.end());
+    }
+
+    ASSERT_EQ(m.capacity(), 0);
+    ASSERT_EQ(m.size(), 0);
+    ASSERT_EQ(m.table, nullptr);
 }
 
 ////////////////////////////////////////
@@ -727,64 +773,19 @@ TEST(unordered_map_test, general) {
 ////////////////////////////////////////
 
 TEST(unordered_set_test, general) {
-    // int N = 2 << 12;
-    // rack::unordered_set<std::string> s;
-    // s.reserve(N);
-    // int oneBeforeMaxLoadFactor = s.maxLoadFactor() * float(N);
+    rack::unordered_set<int> s;
+    ASSERT_TRUE(s.empty());
 
-    // // insert up to just before load factor limit
-    // for (int i = 0; i < oneBeforeMaxLoadFactor; i++) {
-    //     s.insert("chimp" + std::to_string(i));
-    // }
+    int N = 10;
+    for (int i = 0; i < N; i++) {
+        s.insert(i);
+    }
 
-    // ASSERT_TRUE(s.size() == oneBeforeMaxLoadFactor);
-    // ASSERT_TRUE(s.bucket_count() == N);
-
-    // // search
-    // auto it = s.find("chimp0");
-    // ASSERT_TRUE(it != s.end());
-    // ASSERT_TRUE(it->first == "chimp0" || it->first == "chimp0"s); // depending on your map iterator
-
-    // it = s.find("orangutan0");
-    // ASSERT_TRUE(it == s.end());
-
-    // ASSERT_TRUE(s.contains("chimp0"));
-    // ASSERT_TRUE(!s.contains("orangutan0"));
-
-    // // insert to cause resize/rehash
-    // s.insert("orangutan0");
-    // ASSERT_TRUE(s.find("orangutan0") != s.end());
-    // ASSERT_TRUE(s.bucket_count() == 2 * N);
-
-    // // erase
-    // size_t erased = s.erase("chimp0");
-    // ASSERT_TRUE(erased == 1);
-    // ASSERT_TRUE(!s.contains("chimp0"));
-
-    // // clear
-    // s.clear();
-    // ASSERT_TRUE(s.size() == 0);
-    // ASSERT_TRUE(s.empty());
-
-    // // reinsertion
-    // s.insert("gorilla");
-    // s.insert("mandrill");
-    // s.insert("lemur");
-    // ASSERT_TRUE(s.size() == 3);
-
-    // // iterator
-    // int count = 0;
-    // for (auto it = s.begin(); it != s.end(); ++it) {
-    //     count++;
-    // }
-    // ASSERT_TRUE(count == 3);
-
-    // // test duplicate insertion (should not increase size)
-    // s.insert("gorilla");
-    // ASSERT_TRUE(s.size() == 3);
+    ASSERT_EQ(s.size(), N);
+    for (int i = 0; i < N; i++) {
+        ASSERT_TRUE(s.contains(i));
+    }
 }
-
-
 
 ////////////////////////////////////////
 // BST tests 
@@ -1455,7 +1456,7 @@ TEST(rb_test, min_max_sentinel) {
 /////////////////////////////////////////
 
 TEST(map_test, basic_operations) {
-    map<int, std::string> m;
+    rack::map<int, std::string> m;
 
     ASSERT_TRUE(m.empty());
     ASSERT_EQ(m.size(), 0);
@@ -1484,7 +1485,7 @@ TEST(map_test, basic_operations) {
 }
 
 TEST(map_test, iterate) {
-    map<int, int> m;
+    rack::map<int, int> m;
     ASSERT_EQ(m.begin(), m.end());
 
     int N = 20;
@@ -1532,7 +1533,7 @@ TEST(map_test, iterate) {
 /////////////////////////////////////////
 
 TEST(priority_queue_test, general) {
-    priority_queue<int> pq;
+    rack::priority_queue<int> pq;
     ASSERT_TRUE(pq.empty());
     ASSERT_EQ(pq.size(), 0);
 
@@ -1584,6 +1585,5 @@ TEST(priority_queue_test, general) {
     ASSERT_TRUE(pq.empty());
     ASSERT_EQ(pq.size(), 0);
 }
-
 
 }; // end 'rack'

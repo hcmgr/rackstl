@@ -685,9 +685,9 @@ void runBenchmarks() {
     // map_benchLookup();
     // map_benchMixedWorkload();
 
-    divider("priority_queue");
-    priority_queue_benchPushPopContiguous();
-    priority_queue_benchPushPopInterleaved();
+    // divider("priority_queue");
+    // priority_queue_benchPushPopContiguous();
+    // priority_queue_benchPushPopInterleaved();
 }
 
 int main() {

@@ -32,14 +32,10 @@ public:
     //////////////////////////////////////////////////////
     // Capacity
     //////////////////////////////////////////////////////
-
-    bool empty() const noexcept { 
-        return m.empty(); 
-    }
-
-    size_t size() const noexcept { 
-        return m.size(); 
-    }
+    bool empty() const { return m.empty(); }
+    size_t size() const { return m.size(); }
+    size_t capacity() const { return m.capacity(); }
+    size_t max_size() const { return m.max_size(); }
 
     //////////////////////////////////////////////////////
     // Modifiers
@@ -66,7 +62,7 @@ public:
         return m.find(key); 
     }
 
-    bool contains(const K& key) const { 
+    bool contains(const K& key) { 
         return m.find(key) != m.end(); 
     }
 
@@ -102,6 +98,13 @@ public:
         map_iterator base() const { return it; }
     };
 
+    iterator begin() {
+        return iterator(m.begin());
+    }
+
+    iterator end() {
+        return iterator(m.end());
+    }
 
     //////////////////////////////////////////////////////
     // Hash policy
@@ -121,6 +124,14 @@ public:
 
     void reserve(size_t n) {
         m.reserve(n);
+    }
+
+    //////////////////////////////////////////////////////
+    // Display
+    //////////////////////////////////////////////////////
+    std::string to_string() 
+    {
+        return m.to_string();
     }
 };
 
