@@ -463,6 +463,10 @@ public:
     std::string to_string() 
     {
         std::ostringstream oss;
+        oss << "size: " << _size 
+            << ", capacity: " << _capacity 
+            << ", max load factor: " << _maxLoadFactor << " (" << (int)(_maxLoadFactor * _capacity) << ")"
+            << "\n";
         oss << "[";
         for (size_t i = 0; i < _capacity; ++i) 
         {

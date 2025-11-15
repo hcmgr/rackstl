@@ -1,23 +1,17 @@
 TODO
-    - set (map), unordered_set (unordered_map), and queue (deque)
+    - set (map), queue (deque)
     - map
         - migrate BST tests to RBTree test
         - future:
             - test map with non-standard type, so have to pass my own comparators in
             - erase (fixDeletion in rbTree, then can use in map)
-    - priority_queue
-        - start with std::vector, then migrate to rack::vector...its mine, and its faster!
     - unordered_map
         - reserve
-        - erase
-        - other constructors
-        - finish testing
         - benchmark
     - deque
         - deque_benchSort() shows a bug with deque
         - fix can't use private variables in deque UT
     - where I only tested <int>, also try test <MyClass>
-    - add examples of using implementations
     - post benchmarking results
 
 IDEAS

@@ -679,15 +679,15 @@ TEST(deque_test, iterate) {
 ////////////////////////////////////////
 
 TEST(unordered_map_test, general) {
-    int N = 2 << 12;
-    rack::unordered_map<std::string, int> m(N);
-    int oneBeforeMaxLoadFactor = m.maxLoadFactor() * float(N);
+    int initCapacity = 1 << 12;
+    rack::unordered_map<std::string, int> m(initCapacity);
+    int oneBeforeMaxLoadFactor = m.maxLoadFactor() * float(initCapacity);
     for (int i = 0; i < oneBeforeMaxLoadFactor; i++) {
         m.insert({"monkey" + std::to_string(i), i});
     }
 
     ASSERT_TRUE(m.size() == oneBeforeMaxLoadFactor);
-    ASSERT_TRUE(m.capacity() == N);
+    ASSERT_TRUE(m.capacity() == initCapacity);
 
     // search
     auto it = m.find("monkey0");
@@ -703,7 +703,7 @@ TEST(unordered_map_test, general) {
     int prevSize = m.size();
     m.insert({"bonobo0", 0});
     ASSERT_TRUE(m.find("bonobo0") != m.end());
-    ASSERT_TRUE(m.capacity() == 2*N);
+    ASSERT_TRUE(m.capacity() == 2*initCapacity);
     ASSERT_TRUE(m.size() == prevSize + 1);
 
     // erase
@@ -711,13 +711,13 @@ TEST(unordered_map_test, general) {
     m.erase("bonobo0");
     ASSERT_TRUE(m.find("bonobo0") == m.end());
     ASSERT_TRUE(m.size() == prevSize - 1);
-    ASSERT_TRUE(m.capacity() == 2 * N); // capacity stays same
+    ASSERT_TRUE(m.capacity() == 2 * initCapacity); // capacity stays same
 
     // clear
     m.clear();
     ASSERT_TRUE(m.size() == 0);
     ASSERT_TRUE(m.empty() == true);
-    ASSERT_TRUE(m.capacity() == 2 * N); // capacity stays same
+    ASSERT_TRUE(m.capacity() == 2 * initCapacity); // capacity stays same
 
     //
     // TODO
