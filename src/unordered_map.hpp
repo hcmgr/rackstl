@@ -50,8 +50,6 @@ private:
     std::allocator<Bucket> tableAllocator;
     std::hash<K> keyHash;
 
-
-
 public:
     class iterator;
 
@@ -339,7 +337,9 @@ public:
         // constructors
         iterator() : bucketPtr(nullptr), endPtr(nullptr) {}
         iterator(Bucket* p, Bucket* end) : bucketPtr(p), endPtr(end) {}
-        iterator(const iterator& other) : bucketPtr(other.bucketPtr) {}
+        iterator(const iterator& other) 
+            : bucketPtr(other.bucketPtr),
+              endPtr(other.endPtr) {}
         ~iterator() {}
 
         // copy assign
@@ -353,8 +353,8 @@ public:
         //
 
         // reference
-        value_type operator*() const { return bucketPtr->kv; }
-        value_type* operator->() const { return &(bucketPtr->kv); }
+        value_type& operator*() const { return bucketPtr->kv; }
+        pointer operator->() const { return &(bucketPtr->kv); }
 
         // equality and comparison
         bool operator==(const iterator& other) const { return bucketPtr == other.bucketPtr; }

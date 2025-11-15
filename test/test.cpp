@@ -723,15 +723,81 @@ TEST(unordered_map_test, general) {
     // TODO
     //
     // - verify robin hood internals work correctly (i.e. stealing is correct)
-    // note: separate test for this
+    //   note: separate test for this
+    // - verify rehash() and reserve() (already verified implicit 
+    //   resize functionality).
     //
 }
 
 TEST(unordered_map_test, iterate) {
+    rack::unordered_map<std::string, int> m;
+
+    ASSERT_TRUE(m.begin() == m.end());
+    int N = 1000;
+    for (int i = 0; i < N; i++) {
+        std::string key = "key" + std::to_string(i);
+        m[key] = i;
+    }
+
     //
-    // TODO
+    // ++ iteration
     //
-    return;
+    auto it = m.begin();
+    while (it < m.end()) {
+        std::string itKey = it->first;
+        int itVal = it->second;
+        auto foundIt = m.find(itKey);
+        ASSERT_EQ(foundIt->first, itKey);
+        ASSERT_EQ(foundIt->second, itVal);
+        it++;
+    }
+    ASSERT_EQ(it, m.end());
+
+    //
+    // range-base iteration
+    //
+    for (auto &k : m) {
+        std::string itKey = k.first;
+        int itVal = k.second;
+        auto foundIt = m.find(itKey);
+        ASSERT_EQ(foundIt->first, itKey);
+        ASSERT_EQ(foundIt->second, itVal);
+    }
+
+    //
+    // modifying vals via iterator ref
+    //
+    for (auto &k : m) {
+        k.second = -1;
+    }
+    for (auto &k : m) {
+        ASSERT_EQ(k.second, -1);
+    }
+
+    //
+    // after erase
+    //
+    it = m.begin();
+    int M = N / 2;
+    for (int i = 0; i < M; i++) {
+        m.erase(it);
+        it = m.begin();
+    }
+    ASSERT_EQ(m.size(), N - M);
+
+    for (auto &k : m) {
+        std::string itKey = k.first;
+        int itVal = k.second;
+        auto foundIt = m.find(itKey);
+        ASSERT_EQ(foundIt->first, itKey);
+        ASSERT_EQ(foundIt->second, itVal);
+    }
+
+    //
+    // after clear
+    //
+    m.clear();
+    ASSERT_EQ(m.begin(), m.end());
 }
 
 TEST(unordered_map_test, copy_and_move_construct) {
@@ -785,6 +851,72 @@ TEST(unordered_set_test, general) {
     for (int i = 0; i < N; i++) {
         ASSERT_TRUE(s.contains(i));
     }
+}
+
+TEST(unordered_set_test, iterate) {
+    rack::unordered_set<std::string> s;
+    ASSERT_TRUE(s.begin() == s.end());
+
+    int N = 1000;
+    for (int i = 0; i < N; i++) {
+        std::string key = "key" + std::to_string(i);
+        s.insert(key);
+    }
+
+    //
+    // ++ iteration
+    //
+    auto it = s.begin();
+    while (it != s.end()) {
+        ASSERT_TRUE(s.contains(*it));
+
+        std::string itKey = *it;   // iterator should dereference to key only
+        auto foundIt = s.find(itKey);
+        ASSERT_EQ(*foundIt, itKey);
+        ++it;
+    }
+    ASSERT_EQ(it, s.end());
+
+    //
+    // range-based iteration
+    //
+    for (auto &k : s) {
+        ASSERT_TRUE(s.contains(k));
+
+        auto foundIt = s.find(k);
+        ASSERT_EQ(*foundIt, k);
+    }
+
+    //
+    // modifying vals via iterator ref
+    //
+    for (auto &k : s) {
+        k = "modified";
+    }
+    for (auto &k : s) {
+        ASSERT_EQ(k, "modified");
+    }
+
+    //
+    // erase half the elements
+    //
+    it = s.begin();
+    int M = N / 2;
+    for (int i = 0; i < M; i++) {
+        it = s.erase(it);
+    }
+    ASSERT_EQ(s.size(), N - M);
+    for (auto &k : s) {
+        ASSERT_TRUE(s.contains(k));
+        ASSERT_EQ(k, "modified");
+    }
+
+    //
+    // clear
+    //
+    s.clear();
+    ASSERT_EQ(s.size(), 0);
+    ASSERT_TRUE(s.begin() == s.end());
 }
 
 ////////////////////////////////////////

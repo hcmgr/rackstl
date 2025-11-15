@@ -43,11 +43,16 @@ public:
 
     std::pair<iterator, bool> insert(const K& key) {
         auto [it, inserted] = m.insert({key, 0});
-        return {it, inserted};
+        return {iterator(it), inserted};
     }
 
     size_t erase(const K& key) { 
         return m.erase(key); 
+    }
+
+    iterator erase(iterator it) {
+        auto map_iterator = m.erase(it.mapIt);
+        return iterator(map_iterator);
     }
 
     void clear() noexcept { 
@@ -59,7 +64,7 @@ public:
     //////////////////////////////////////////////////////
 
     iterator find(const K& key) { 
-        return m.find(key); 
+        return iterator(m.find(key));
     }
 
     bool contains(const K& key) { 
@@ -71,31 +76,30 @@ public:
     //////////////////////////////////////////////////////
 
     class iterator {
-    private:
-        using map_iterator = typename rack::unordered_map<K, char>::iterator;
-        map_iterator it;
-
     public:
+        using map_iterator = typename rack::unordered_map<K, char>::iterator;
+        map_iterator mapIt;
+
         using iterator_category = std::forward_iterator_tag;
         using difference_type   = std::ptrdiff_t;
         using value_type        = K;
-        using pointer           = const K*;
-        using reference         = const K&;
+        using pointer           = value_type*;
+        using reference         = value_type&;
 
         iterator() = default;
-        iterator(map_iterator i) : it(i) {}
+        iterator(map_iterator i) : mapIt(i) {}
 
-        reference operator*() const { return it->first; }
-        pointer operator->() const { return &(it->first); }
+        reference operator*() const { return mapIt->first; }
+        pointer operator->() const { return &(mapIt->first); }
 
-        iterator& operator++() { ++it; return *this; }
-        iterator operator++(int) { iterator tmp = *this; ++it; return tmp; }
+        iterator& operator++() { ++mapIt; return *this; }
+        iterator operator++(int) { iterator tmp = *this; ++mapIt; return tmp; }
 
-        bool operator==(const iterator& other) const { return it == other.it; }
-        bool operator!=(const iterator& other) const { return it != other.it; }
+        bool operator==(const iterator& other) const { return mapIt == other.mapIt; }
+        bool operator!=(const iterator& other) const { return mapIt != other.mapIt; }
 
         // internal access if needed
-        map_iterator base() const { return it; }
+        map_iterator base() const { return mapIt; }
     };
 
     iterator begin() {
