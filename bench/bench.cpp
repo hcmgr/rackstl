@@ -662,32 +662,30 @@ void divider(std::string benchName) {
 }
 
 void runBenchmarks() {
-    // divider("vector");
-    // vector_benchPushBack();
-    // vector_benchmarkIterate();
-    // // vector_benchSort();
+    divider("vector");
+    vector_benchPushBack();
+    vector_benchmarkIterate();
     
-    // divider("shared_ptr");
-    // shared_ptr_bench();
+    divider("shared_ptr");
+    shared_ptr_bench();
 
-    // divider("unique_ptr");
-    // unique_ptr_bench();
+    divider("unique_ptr");
+    unique_ptr_bench();
 
-    // divider("deque");
-    // deque_benchPush();
-    // deque_benchIterate();
-    // // deque_benchSort();
-    // deque_benchRandomAccess();
+    divider("deque");
+    deque_benchPush();
+    deque_benchIterate();
+    deque_benchRandomAccess();
 
-    // divider("map");
-    // map_benchInsert();
-    // map_benchIterate();
-    // map_benchLookup();
-    // map_benchMixedWorkload();
+    divider("map");
+    map_benchInsert();
+    map_benchIterate();
+    map_benchLookup();
+    map_benchMixedWorkload();
 
-    // divider("priority_queue");
-    // priority_queue_benchPushPopContiguous();
-    // priority_queue_benchPushPopInterleaved();
+    divider("priority_queue");
+    priority_queue_benchPushPopContiguous();
+    priority_queue_benchPushPopInterleaved();
 }
 
 int main() {
